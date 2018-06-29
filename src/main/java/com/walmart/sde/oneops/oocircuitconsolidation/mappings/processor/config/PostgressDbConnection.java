@@ -17,6 +17,11 @@ public class PostgressDbConnection {
     if (connection == null) {
       createConnection(props);
     }
+    try {
+      connection.setAutoCommit(false);
+    } catch (SQLException e) {
+      throw new RuntimeException("unable to set AutoCommit False: " + e.getMessage());
+    }
     return connection;
   }
 
@@ -30,14 +35,16 @@ public class PostgressDbConnection {
       String CMS_DB_USER = props.getProperty(IConstants.CMS_DB_USER);
       String CMS_DB_PASS = props.getProperty(IConstants.CMS_DB_PASS);
 
-      log.info("connecting to <CMS_DB_HOST>:{} for user <CMS_DB_USER>: {}" , CMS_DB_HOST,CMS_DB_USER);
-    
-        
-        
-      //Connection conn = DriverManager.getConnection("+, cmsDbUserName, cmsDbPassword)
-          
+      log.info("connecting to <CMS_DB_HOST>:{} for user <CMS_DB_USER>: {}", CMS_DB_HOST,
+          CMS_DB_USER);
+
+
+
+      // Connection conn = DriverManager.getConnection("+, cmsDbUserName, cmsDbPassword)
+
       Class.forName("org.postgresql.Driver");
-      connection = DriverManager.getConnection("jdbc:postgresql://"+CMS_DB_HOST+":5432/"+IConstants.CMS_DB_SCHEMA, CMS_DB_USER,
+      connection = DriverManager.getConnection(
+          "jdbc:postgresql://" + CMS_DB_HOST + ":5432/" + IConstants.CMS_DB_SCHEMA, CMS_DB_USER,
           CMS_DB_PASS);
 
       log.info("created database connection...");

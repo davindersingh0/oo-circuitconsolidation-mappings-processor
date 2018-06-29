@@ -12,6 +12,10 @@ public interface IConstants {
   String cmsCiRelationsMappingsMapKey="cmsCiRelationsMappings";
   
   
+  // from iconstants file:
   
+  String DESIGN_PHASE="design";
+  String TRANSITION_PHASE="transition";
+  String OPERATE_PHASE="operate";
   
 }

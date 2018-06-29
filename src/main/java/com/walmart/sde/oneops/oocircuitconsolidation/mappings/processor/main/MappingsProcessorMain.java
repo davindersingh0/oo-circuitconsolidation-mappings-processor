@@ -17,6 +17,7 @@ import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.config.I
 import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.config.PostgressDbConnection;
 import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.model.CmsCIRelationAndRelationAttributesActionMappingsModel;
 import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.model.CmsCiAndCmsCiAttributesActionMappingsModel;
+import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.util.CircuitconsolidationUtil;
 import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.util.MappingsCache;
 
 
@@ -56,40 +57,37 @@ public class MappingsProcessorMain {
 
 
 
+  public static void main(String[] args) {
 
- 
-  public void processMappings(Map<String, List> transformationMappings) {
 
+  }
+
+
+  public void processMappings(Map<String, List> transformationMappings, String ns,
+      String platformName, String ooPhase, String envName, Connection conn) {
+    
+    String nsForPlatformCiComponents=CircuitconsolidationUtil.getnsForPlatformCiComponents(ns, platformName, ooPhase, envName);
+    //TODO: updatePlatformSourceToOneOps();
+    log.info("nsForPlatformCiComponents: "+nsForPlatformCiComponents);
+    processMappings(transformationMappings, nsForPlatformCiComponents, conn);
+    
+  }
+
+
+  private void processMappings(Map<String, List> transformationMappings,
+      String nsForPlatformCiComponents, Connection conn) {
     log.info("starting processing transformation mappings...");
 
-    CMSCIMappingsProcessor cmsciMappingsProcessor = new CMSCIMappingsProcessor();
+    CMSCIMappingsProcessor cmsciMappingsProcessor = new CMSCIMappingsProcessor(nsForPlatformCiComponents, conn);
     
     cmsciMappingsProcessor.processCMSCIMappings(transformationMappings.get(IConstants.cmsCiMappingsMapKey));
     
-    CMSCIRelationsMappingsProcessor  cmsciRelationsMappingsProcessor = new CMSCIRelationsMappingsProcessor();
+    CMSCIRelationsMappingsProcessor  cmsciRelationsMappingsProcessor = new CMSCIRelationsMappingsProcessor(nsForPlatformCiComponents, conn);
     
-    cmsciRelationsMappingsProcessor.processCMSCIRelationsMappings(transformationMappings.get(IConstants.cmsCiRelationsMappingsMapKey));
-    
-    
+    cmsciRelationsMappingsProcessor.processCMSCIRelationsMappings(transformationMappings.get(IConstants.cmsCiRelationsMappingsMapKey), nsForPlatformCiComponents);
     log.info("Completed processing transformation mappings");
-
-  }
-
-
-  public static void main(String[] args) {
-    String host = System.getProperty(IConstants.CMS_DB_HOST);
-    String user = System.getProperty(IConstants.CMS_DB_USER);
-    String pwd = System.getProperty(IConstants.CMS_DB_PASS);
-
-    MappingsProcessorMain mappingsProcessor = new MappingsProcessorMain();
-    Properties props = mappingsProcessor.loadTransformationConfigurations(host, user, pwd);
-    Connection conn = PostgressDbConnection.getConnection(props);
-    MappingsCache mappingsCache= new MappingsCache();
     
-    Map<String, List> transformationMappings = mappingsCache.createTransformationMappingsCache(conn);
-    mappingsProcessor.processMappings(transformationMappings);
-
-
-
+    
   }
+  
 }
