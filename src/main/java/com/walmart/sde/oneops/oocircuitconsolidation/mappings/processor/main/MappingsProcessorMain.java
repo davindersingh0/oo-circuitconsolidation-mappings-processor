@@ -63,28 +63,30 @@ public class MappingsProcessorMain {
   }
 
 
-  public void processMappings(Map<String, List> transformationMappings, String ns,
+/*  public void processMappings(Map<String, List> transformationMappings, String ns,
       String platformName, String ooPhase, String envName, Connection conn) {
     
     String nsForPlatformCiComponents=CircuitconsolidationUtil.getnsForPlatformCiComponents(ns, platformName, ooPhase, envName);
     //TODO: updatePlatformSourceToOneOps();
     log.info("nsForPlatformCiComponents: "+nsForPlatformCiComponents);
-    processMappings(transformationMappings, nsForPlatformCiComponents, conn);
+    processMappings(transformationMappings, ns, nsForPlatformCiComponents, conn);
     
-  }
+  }*/
 
 
-  private void processMappings(Map<String, List> transformationMappings,
-      String nsForPlatformCiComponents, Connection conn) {
+  public void processMappings(Map<String, List> transformationMappings, String ns,
+      String platformName, String ooPhase, String envName, Connection conn) {
     log.info("starting processing transformation mappings...");
 
-    CMSCIMappingsProcessor cmsciMappingsProcessor = new CMSCIMappingsProcessor(nsForPlatformCiComponents, conn);
+    CMSCIMappingsProcessor cmsciMappingsProcessor = new CMSCIMappingsProcessor(ns,
+        platformName, ooPhase, envName, conn);
     
     cmsciMappingsProcessor.processCMSCIMappings(transformationMappings.get(IConstants.cmsCiMappingsMapKey));
     
-    CMSCIRelationsMappingsProcessor  cmsciRelationsMappingsProcessor = new CMSCIRelationsMappingsProcessor(nsForPlatformCiComponents, conn);
+    CMSCIRelationsMappingsProcessor  cmsciRelationsMappingsProcessor = new CMSCIRelationsMappingsProcessor(ns,
+        platformName, ooPhase, envName, conn);
     
-    cmsciRelationsMappingsProcessor.processCMSCIRelationsMappings(transformationMappings.get(IConstants.cmsCiRelationsMappingsMapKey), nsForPlatformCiComponents);
+    cmsciRelationsMappingsProcessor.processCMSCIRelationsMappings(transformationMappings.get(IConstants.cmsCiRelationsMappingsMapKey));
     log.info("Completed processing transformation mappings");
     
     

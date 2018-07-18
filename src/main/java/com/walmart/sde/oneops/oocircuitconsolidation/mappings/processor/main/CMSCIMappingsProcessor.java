@@ -3,7 +3,6 @@ package com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.main;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.Statement;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,20 +10,53 @@ import com.google.gson.Gson;
 import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.config.SqlQueries;
 import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.exception.UnSupportedTransformationMappingException;
 import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.model.CmsCiAndCmsCiAttributesActionMappingsModel;
+import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.util.CircuitconsolidationUtil;
 
 public class CMSCIMappingsProcessor {
 
   private final Logger log = LoggerFactory.getLogger(getClass());
 
+  String ns;
+  String platformName;
+  String ooPhase;
+  String envName;
   String nsForPlatformCiComponents;
   Connection conn;
-
+  
 
   CMSCIMappingsProcessor(String nsForPlatformCiComponents, Connection conn) {
     setNsForPlatformCiComponents(nsForPlatformCiComponents);
     setConn(conn);
   }
 
+  CMSCIMappingsProcessor(String ns,  String platformName, String ooPhase, String envName, Connection conn) {
+    
+    setNs(ns);
+    setPlatformName(platformName);
+    setOoPhase(ooPhase);
+    setEnvName(envName);
+    setConn(conn);
+    setNsForPlatformCiComponents(CircuitconsolidationUtil.getnsForPlatformCiComponents(ns, platformName, ooPhase, envName));
+    
+  }
+
+  
+  
+  public void setNs(String ns) {
+    this.ns = ns;
+  }
+
+  public void setPlatformName(String platformName) {
+    this.platformName = platformName;
+  }
+
+  public void setOoPhase(String ooPhase) {
+    this.ooPhase = ooPhase;
+  }
+
+  public void setEnvName(String envName) {
+    this.envName = envName;
+  }
 
   public void setConn(Connection conn) {
     this.conn = conn;
@@ -231,20 +263,146 @@ public class CMSCIMappingsProcessor {
     // operations: create Add New attribute for CMSCI with default value , set for both DJ & DF
     // fields
 
+    
+    //getCMSCI for specific class and add the attribute, if multiple classes then add to all of them
+    
+    String sourceClassName = mapping.getSourceClassname();
+    int sourceClassId = mapping.getSourceClassId();
+    int sourceAttributeId = mapping.getSourceAttributeId();
+    
+    String sql =    "select "+
+        "ca.ci_attribute_id, "+
+        "ca.attribute_id, "+
+        "ca.ci_id, "+
+        "cla.attribute_name, "+
+        "ci.ci_name, "+
+        "ns.ns_path "+
+        "from cm_ci_attributes ca, md_class_attributes cla, cm_ci ci, ns_namespaces ns "+
+        "where "+
+        "ca.ci_id=ci.ci_id "+
+        "and ci.ns_id = ns.ns_id "+
+        "and ca.attribute_id=cla.attribute_id "+
+        "and ns.ns_path =? "+
+        "and ci.class_id=? ;";
+    
+    
+    try {
+      // String selectSQL = SqlQueries.SQL_SELECT_NakedCMSCIByNsAndClazz;
+   
+       log.info("processMapping_SET_DEFAULT_ATTRIBUTE_VALUE       : "+sql);
+       PreparedStatement preparedStatement = conn.prepareStatement(sql);
+       
+       preparedStatement.setString(1, this.nsForPlatformCiComponents);
+       preparedStatement.setInt(2, sourceClassId);
+      
+       
+       
+       // preparedStatement.setString(1, this.nsForPlatformCiComponents);
+       
+       log.info("preparedStatement: "+preparedStatement);
+       ResultSet resultSet = preparedStatement.executeQuery();
+       
+       int numberOfRecords=0;
 
+       int numberOfColumns=resultSet.getMetaData().getColumnCount();
+       while (resultSet.next()) {
+         numberOfRecords++;
+         for(int i=1;i<=numberOfColumns;i++) {
+           log.info(resultSet.getMetaData().getColumnLabel(i) +" : " +resultSet.getObject(i));
+           
+         }
+       
+
+
+       }
+       log.info("preparedStatement: "+preparedStatement);
+       log.info(" processMapping_SET_DEFAULT_ATTRIBUTE_VALUE: numberOfRecords: "+numberOfRecords);
+
+     } catch (Exception e) {
+       throw new RuntimeException("Error while fetching records" +e.getMessage());
+     }
+ 
+    
+    //TODO: WIP
+    
+    
+    
   }
 
   private void process_UPDATE_SOURCE_ATTRIBUTE_ID(
       CmsCiAndCmsCiAttributesActionMappingsModel mapping) {
 
     // from mappings
+    
+    
+    String sourceClassName = mapping.getSourceClassname();
+    int sourceClassId = mapping.getSourceClassId();
+    int sourceAttributeId = mapping.getSourceAttributeId();
+    
+    
     String targetClassName = mapping.getTargetClassname();
     int targetClassId = mapping.getTargetClassId();
     String targetAttributeName = mapping.getTargetClassname();
     int targetAttributeId = mapping.getTargetAttributeId();
 
+    //TODO: here "and ci.class_id=? "+ needs to be updated to targetClassID instead of sourceClassId, because we are updating classID before updating attributeIds
+    
+
+    String sql =    "select "+
+        "ca.ci_attribute_id, "+
+        "ca.attribute_id, "+
+        "ca.ci_id, "+
+        "cla.attribute_name, "+
+        "ci.ci_name, "+
+        "ns.ns_path "+
+        "from cm_ci_attributes ca, md_class_attributes cla, cm_ci ci, ns_namespaces ns "+
+        "where "+
+        "ca.ci_id=ci.ci_id "+
+        "and ci.ns_id = ns.ns_id "+
+        "and ca.attribute_id=cla.attribute_id "+
+        "and ns.ns_path =? "+
+        "and ci.class_id=? "+
+        "and ca.attribute_id=?; ";
+    
+
+    try {
+      // String selectSQL = SqlQueries.SQL_SELECT_NakedCMSCIByNsAndClazz;
+   
+       log.info("SQL_SELECT_CMSCIATTRIBUTE        : "+sql);
+       PreparedStatement preparedStatement = conn.prepareStatement(sql);
+       
+       preparedStatement.setString(1, this.nsForPlatformCiComponents);
+       preparedStatement.setInt(2, sourceClassId);
+       preparedStatement.setInt(3, sourceAttributeId);
+       
+       
+       // preparedStatement.setString(1, this.nsForPlatformCiComponents);
+       
+       log.info("preparedStatement: "+preparedStatement);
+       ResultSet resultSet = preparedStatement.executeQuery();
+       
+       int numberOfRecords=0;
+
+       int numberOfColumns=resultSet.getMetaData().getColumnCount();
+       while (resultSet.next()) {
+         numberOfRecords++;
+         for(int i=1;i<=numberOfColumns;i++) {
+           log.info(resultSet.getMetaData().getColumnLabel(i) +" : " +resultSet.getObject(i));
+           
+         }
+       
 
 
+       }
+       log.info(" process_UPDATE_SOURCE_ATTRIBUTE_ID: numberOfRecords: "+numberOfRecords);
+
+     } catch (Exception e) {
+       throw new RuntimeException("Error while fetching records" +e.getMessage());
+     }
+ 
+    
+    
+    
   }
 
 
