@@ -8,7 +8,7 @@ public class CmsCIRelationAndRelationAttributesActionMappingsModel implements Se
    * 
    */
   private static final long serialVersionUID = 1L;
-
+  private String ooPhase;
   private String sourcePack;
   private String sourceCmsCiRelationKey;
   private String sourceCmsCiRelationName;
@@ -38,6 +38,15 @@ public class CmsCIRelationAndRelationAttributesActionMappingsModel implements Se
   
   private String action;
   private String entityType;
+
+  
+  public String getOoPhase() {
+    return ooPhase;
+  }
+
+  public void setOoPhase(String ooPhase) {
+    this.ooPhase = ooPhase;
+  }
 
   public String getSourcePack() {
     return sourcePack;

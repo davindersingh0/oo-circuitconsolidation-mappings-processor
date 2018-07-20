@@ -62,18 +62,6 @@ public class MappingsProcessorMain {
 
   }
 
-
-/*  public void processMappings(Map<String, List> transformationMappings, String ns,
-      String platformName, String ooPhase, String envName, Connection conn) {
-    
-    String nsForPlatformCiComponents=CircuitconsolidationUtil.getnsForPlatformCiComponents(ns, platformName, ooPhase, envName);
-    //TODO: updatePlatformSourceToOneOps();
-    log.info("nsForPlatformCiComponents: "+nsForPlatformCiComponents);
-    processMappings(transformationMappings, ns, nsForPlatformCiComponents, conn);
-    
-  }*/
-
-
   public void processMappings(Map<String, List> transformationMappings, String ns,
       String platformName, String ooPhase, String envName, Connection conn) {
     log.info("starting processing transformation mappings...");

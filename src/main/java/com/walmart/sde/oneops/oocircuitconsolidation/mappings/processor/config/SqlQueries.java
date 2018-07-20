@@ -2,6 +2,7 @@ package com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.config;
 
 public interface SqlQueries {
 
+  //final query
   String SQL_SELECT_NakedCMSCIByNsAndClazz=      "select "+
       "ci.ci_id as ciId, "+
       "ci.ci_name as ciName,"+

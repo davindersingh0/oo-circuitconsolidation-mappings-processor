@@ -18,4 +18,8 @@ public interface IConstants {
   String TRANSITION_PHASE="transition";
   String OPERATE_PHASE="operate";
   
+  String CIRCUIT_CONSOLIDATION_USER="circuit_consolidation_process";
+  String CIRCUIT_CONSOLIDATION_COMMENTS="updated for circuit consolidation";
+  
+  
 }

@@ -1,6 +1,7 @@
 package com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.util;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -19,15 +20,15 @@ public class MappingsCache {
 
   private final Logger log = LoggerFactory.getLogger(getClass());
 
-  public Map<String, List> createTransformationMappingsCache(Connection conn) {
+  public Map<String, List> createTransformationMappingsCache(Connection conn, String ooPhase) {
 
     log.info("loading transformation mappings...");
 
     Map<String, List> transformationMappingsMap = new HashMap<String, List>();
 
-    List<CmsCiAndCmsCiAttributesActionMappingsModel> cmsCiMappings = getCMSCiMappings(conn);
+    List<CmsCiAndCmsCiAttributesActionMappingsModel> cmsCiMappings = getCMSCiMappings(conn, ooPhase);
     List<CmsCIRelationAndRelationAttributesActionMappingsModel> cmsCiRelationsMappings =
-        getCMSCiRelationsMappings(conn);
+        getCMSCiRelationsMappings(conn, ooPhase);
 
     log.info("cmsCiMappings: " + new Gson().toJson(cmsCiMappings));
     log.info("cmsCiRelationsMappings: " + new Gson().toJson(cmsCiRelationsMappings));
@@ -42,37 +43,42 @@ public class MappingsCache {
 
   }
 
-  private List<CmsCiAndCmsCiAttributesActionMappingsModel> getCMSCiMappings(Connection conn) {
+  private List<CmsCiAndCmsCiAttributesActionMappingsModel> getCMSCiMappings(Connection conn, String ooPhase) {
 
     List<CmsCiAndCmsCiAttributesActionMappingsModel> cmsCiMappingsList =
         new ArrayList<CmsCiAndCmsCiAttributesActionMappingsModel>();
 
     try {
-      Statement statement = conn.createStatement();
-      String sqlGetAllCiMappings = "SELECT * FROM kloopzcm.CmsCiAndCmsCiAttributesActionMappings";
-      ResultSet resultSet = statement.executeQuery(sqlGetAllCiMappings);
+     
+      String sqlGetAllCiMappings = "SELECT * FROM kloopzcm.CmsCiAndCmsCiAttributesActionMappings where sourceclassid!=targetclassid and oophase=?;";
+      PreparedStatement preparedStement=conn.prepareStatement(sqlGetAllCiMappings);
+      preparedStement.setString(1, ooPhase);
+      
+      log.info("preparedStement: "+preparedStement);
+      ResultSet resultSet = preparedStement.executeQuery();
 
 
       while (resultSet.next()) {
         CmsCiAndCmsCiAttributesActionMappingsModel mapping =
             new CmsCiAndCmsCiAttributesActionMappingsModel();
 
-        String sourcePack = resultSet.getString(1);
-        String sourceClassname = resultSet.getString(2);
-        int sourceClassId = resultSet.getInt(3);
-        String sourceAttributeName = resultSet.getString(4);
-        int sourceAttributeId = resultSet.getInt(5);
-        String sourceDefaultValue = resultSet.getString(6);
-        String targetPack = resultSet.getString(7);
-        String targetClassname = resultSet.getString(8);
-        int targetClassId = resultSet.getInt(9);
-        String targetAttributeName = resultSet.getString(10);
-        int targetAttributeId = resultSet.getInt(11);
-        String targetDefaultValue = resultSet.getString(12);
-        String action = resultSet.getString(13);
-        String entityType = resultSet.getString(14);
+        //String ooPhase=resultSet.getString("oophase");
+        String sourcePack = resultSet.getString("sourcepack");
+        String sourceClassname = resultSet.getString("sourceclassname");
+        int sourceClassId = resultSet.getInt("sourceclassid");
+        String sourceAttributeName = resultSet.getString("sourceattributename");
+        int sourceAttributeId = resultSet.getInt("sourceattributeid");
+        String sourceDefaultValue = resultSet.getString("sourcedefaultvalue");
+        String targetPack = resultSet.getString("targetpack");
+        String targetClassname = resultSet.getString("targetclassname");
+        int targetClassId = resultSet.getInt("targetclassid");
+        String targetAttributeName = resultSet.getString("targetattributename");
+        int targetAttributeId = resultSet.getInt("targetattributeid");
+        String targetDefaultValue = resultSet.getString("targetdefaultvalue");
+        String action = resultSet.getString("action");
+        String entityType = resultSet.getString("entitytype");
 
-
+        mapping.setOoPhase(ooPhase);
         mapping.setSourcePack(sourcePack);
         mapping.setSourceClassname(sourceClassname);
         mapping.setSourceClassId(sourceClassId);
@@ -102,7 +108,7 @@ public class MappingsCache {
   }
 
   private List<CmsCIRelationAndRelationAttributesActionMappingsModel> getCMSCiRelationsMappings(
-      Connection conn) {
+      Connection conn, String ooPhase) {
 
     List<CmsCIRelationAndRelationAttributesActionMappingsModel> cmsCiRelationsMappingsList =
         new ArrayList<CmsCIRelationAndRelationAttributesActionMappingsModel>();
@@ -110,53 +116,60 @@ public class MappingsCache {
 
 
     try {
-      Statement statement = conn.createStatement();
+     
       String sqlGetAllCiMappings =
-          "SELECT * FROM kloopzcm.CmsCIRelationAndRelationAttributesActionMappings";
-      ResultSet resultSet = statement.executeQuery(sqlGetAllCiMappings);
+          "SELECT * FROM kloopzcm.CmsCIRelationAndRelationAttributesActionMappings where oophase=?;";
+      log.info("sqlGetAllCiMappings: "+sqlGetAllCiMappings);
+    
 
-      log.info("MetaData: " + resultSet.getMetaData());
-
+      PreparedStatement preparedStement=conn.prepareStatement(sqlGetAllCiMappings);
+      preparedStement.setString(1, ooPhase);
+      
+      log.info("preparedStement: "+preparedStement);
+      ResultSet resultSet = preparedStement.executeQuery();
+      
 
       while (resultSet.next()) {
 
         CmsCIRelationAndRelationAttributesActionMappingsModel mapping =
             new CmsCIRelationAndRelationAttributesActionMappingsModel();
 
+        //String ooPhase=resultSet.getString("oophase");
+        String sourcePack = resultSet.getString("sourcepack");
+        String targetPack = resultSet.getString("targetpack");
 
-        String sourcePack = resultSet.getString(1);
-        String targetPack = resultSet.getString(2);
+        String sourceCmsCiRelationKey = resultSet.getString("sourcecmscirelationkey");
+        String sourceCmsCiRelationName = resultSet.getString("sourcecmscirelationname");
+        int sourceCmsCiRelationId = resultSet.getInt("sourcecmscirelationid");
+        String sourceFromCmsCiClazzName = resultSet.getString("sourcefromcmsciclazzname");
+        int sourceFromCmsCiClazzId = resultSet.getInt("sourcefromcmsciclazzid");
+        String sourceToCmsCiClazzName = resultSet.getString("sourcetocmsciclazzname");
+        int sourceToCmsCiClazzId = resultSet.getInt("sourcetocmsciclazzid");
 
-        String sourceCmsCiRelationKey = resultSet.getString(3);
-        String sourceCmsCiRelationName = resultSet.getString(4);
-        int sourceCmsCiRelationId = resultSet.getInt(5);
-        String sourceFromCmsCiClazzName = resultSet.getString(6);
-        int sourceFromCmsCiClazzId = resultSet.getInt(7);
-        String sourceToCmsCiClazzName = resultSet.getString(8);
-        int sourceToCmsCiClazzId = resultSet.getInt(9);
-
-        String targetCmsCiRelationKey = resultSet.getString(10);
-
-
-        String targetCmsCiRelationName = resultSet.getString(11);
-        int targetCmsCiRelationId = resultSet.getInt(12);
-        String targetFromCmsCiClazzName = resultSet.getString(13);
-        int targetFromCmsCiClazzId = resultSet.getInt(14);// need fix
-        String targetToCmsCiClazzName = resultSet.getString(15);
-        int targetToCmsCiClazzId = resultSet.getInt(16);
-
-        int attributeId = resultSet.getInt(16);
-        int relationId = resultSet.getInt(18);
-        String attributeName = resultSet.getString(19);
-        String dfValue = resultSet.getString(20);
-        String djValue = resultSet.getString(21);
-
-        String action = resultSet.getString(22);
-        String entityType = resultSet.getString(23);
+        String targetCmsCiRelationKey = resultSet.getString("targetcmscirelationkey");
 
 
+        String targetCmsCiRelationName = resultSet.getString("targetcmscirelationname");
+        int targetCmsCiRelationId = resultSet.getInt("targetcmscirelationid");
+        String targetFromCmsCiClazzName = resultSet.getString("targetfromcmsciclazzname");
+        int targetFromCmsCiClazzId = resultSet.getInt("targetfromcmsciclazzid");// need fix
+        String targetToCmsCiClazzName = resultSet.getString("targettocmsciclazzname");
+        int targetToCmsCiClazzId = resultSet.getInt("targettocmsciclazzid");
+
+        int attributeId = resultSet.getInt("attributeid");
+        int relationId = resultSet.getInt("relationid");
+        String attributeName = resultSet.getString("attributename");
+        String dfValue = resultSet.getString("dfvalue");
+        String djValue = resultSet.getString("djvalue");
+
+        String action = resultSet.getString("action");
+        String entityType = resultSet.getString("entitytype");
+
+        
+        
         // setters
 
+        mapping.setOoPhase(ooPhase);
         mapping.setSourcePack(sourcePack);
         mapping.setTargetPack(targetPack);
         mapping.setSourceCmsCiRelationKey(sourceCmsCiRelationKey);

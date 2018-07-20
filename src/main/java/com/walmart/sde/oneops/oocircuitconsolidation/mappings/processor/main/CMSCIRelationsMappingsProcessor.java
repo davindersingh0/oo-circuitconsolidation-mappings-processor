@@ -8,6 +8,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.google.gson.Gson;
+import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.dal.KloopzCmDal;
 import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.exception.UnSupportedTransformationMappingException;
 import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.model.CmsCIRelationAndRelationAttributesActionMappingsModel;
 import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.util.CircuitconsolidationUtil;
@@ -23,13 +24,8 @@ public class CMSCIRelationsMappingsProcessor {
   String envName;
   String nsForPlatformCiComponents;
   Connection conn;
-
-
-  CMSCIRelationsMappingsProcessor(String ns, String nsForPlatformCiComponents, Connection conn) {
-    setNs(ns);
-    setNsForPlatformCiComponents(nsForPlatformCiComponents);
-    setConn(conn);
-  }
+  KloopzCmDal dal;
+  
 
   CMSCIRelationsMappingsProcessor(String ns,  String platformName, String ooPhase, String envName, Connection conn) {
     setNs(ns);
@@ -38,10 +34,15 @@ public class CMSCIRelationsMappingsProcessor {
     setEnvName(envName);
     setConn(conn);
     setNsForPlatformCiComponents(CircuitconsolidationUtil.getnsForPlatformCiComponents(ns, platformName, ooPhase, envName));
-    
+    setDal(new KloopzCmDal(conn));
   }
 
   
+  public void setDal(KloopzCmDal dal) {
+    this.dal = dal;
+  }
+
+
   public void setPlatformName(String platformName) {
     this.platformName = platformName;
   }
@@ -86,10 +87,11 @@ public class CMSCIRelationsMappingsProcessor {
       if (entityType.equalsIgnoreCase("CMSCI_RELATION")) {
         switch (action) {
           case "CREATE_RELATION":
-            process_CREATE_RELATION(mapping);
+           // process_CREATE_RELATION(mapping);
 
             break;
           case "DELETE_RELATION":
+          //  process_DELETE_RELATIONV2(mapping);
             process_DELETE_RELATION(mapping);
 
             break;
@@ -140,10 +142,177 @@ public class CMSCIRelationsMappingsProcessor {
 
     // create: create New Relation
 
+    
+    // TODO: working on create relation: 
+    
+    // {call cm_create_relation(#{ciRelationId}, #{nsId}, #{fromCiId}, #{relationId}, #{toCiId}, #{relationGoid}, #{comments}, #{relationStateId})}
+    
+
+    
+    // get from CIs for given clazz, get toCiz For given clazz, create relations in loop to ensure all fromCIs have relation with ToCis
+    
+    String cmsciIdsByClazzAndNsPath_SQL=      "select "+
+        "ci.ci_id as ciId, "+
+        "ci.ci_name as ciName,"+
+        "ci.class_id as ciClassId,"+
+        "cl.class_name as ciClassName,"+
+        "cl.impl as impl, "+
+        "ci.ns_id as nsId, "+
+        "ns.ns_path as nsPath, "+
+        "ci.ci_goid as ciGoid, "+
+        "ci.comments, "+
+        "ci.ci_state_id as ciStateId, "+
+        "st.state_name as ciState, "+
+        "ci.last_applied_rfc_id as lastAppliedRfcId, "+
+        "ci.created_by as createdBy, "+
+        "ci.updated_by as updatedBy, "+ 
+        "ci.created, "+
+        "ci.updated "+
+    "from cm_ci ci, md_classes cl, ns_namespaces ns, cm_ci_state st "+
+    "where ns.ns_path = ? "+
+    "and cl.class_name = ? "+
+    "and ci.class_id = cl.class_id "+
+    "and ci.ns_id = ns.ns_id "+
+    "and ci.ci_state_id = st.ci_state_id;";
+    
+    
+   
+    String targetNsPath;
+    
+    if (targetFromCMSCIClazzName.contains(".Platform")) {
+      targetNsPath=this.ns;
+    } else {
+      targetNsPath=this.nsForPlatformCiComponents;
+      
+    }
+    
+    try {
+
+  
+      log.info("cmsciIdsByClazzAndNsPath_SQL        : "+cmsciIdsByClazzAndNsPath_SQL);
+      PreparedStatement preparedStatement = conn.prepareStatement(cmsciIdsByClazzAndNsPath_SQL);
+      preparedStatement.setString(1, targetNsPath);
+      preparedStatement.setString(2, targetFromCMSCIClazzName);
+      
+      log.info("preparedStatement: "+preparedStatement);
+      ResultSet resultSet_FromCIds = preparedStatement.executeQuery();
+      
+      int numberOfRecords=0;
+
+    
+      List<Integer> fromCiIds=new ArrayList<Integer>();
+      while(resultSet_FromCIds.next()) {
+        
+        fromCiIds.add(resultSet_FromCIds.getInt(1));
+        numberOfRecords++;
+      }
+      
+      log.info(" cmsciIdsByClazzAndNsPath_SQL: numberOfRecords: "+numberOfRecords);
+      
+      
+      //ToClazzBlock
+      
+      if (targetToCMSCIClazzName.contains(".Platform")) {
+        targetNsPath=this.ns;
+      } else {
+        targetNsPath=this.nsForPlatformCiComponents;
+        
+      }
+      
+      log.info("cmsciIdsByClazzAndNsPath_SQL        : "+cmsciIdsByClazzAndNsPath_SQL);
+      preparedStatement = conn.prepareStatement(cmsciIdsByClazzAndNsPath_SQL);
+      preparedStatement.setString(1, targetNsPath);
+      preparedStatement.setString(2, targetToCMSCIClazzName);
+      
+      log.info("preparedStatement: "+preparedStatement);
+      ResultSet resultSet_ToCIds = preparedStatement.executeQuery();
+      
+      numberOfRecords=0;
+
+    
+      List<Integer> toCiIds=new ArrayList<Integer>();
+      while(resultSet_ToCIds.next()) {
+        
+        toCiIds.add(resultSet_ToCIds.getInt(1));
+        numberOfRecords++;
+      }
+      
+      log.info(" cmsciIdsByClazzAndNsPath_SQL: numberOfRecords: "+numberOfRecords);
+      
+      
+      for (int fromCiId: fromCiIds) {
+       
+        for (int toCiId: toCiIds) {
+          
+          String relationName = mapping.getSourceCmsCiRelationName();
+          String targetNsPath_createRelation;
+          if (relationName.contains(".Requires")) {
+            targetNsPath_createRelation=this.ns;
+          } else {
+            targetNsPath_createRelation=this.nsForPlatformCiComponents;
+          }
+    
+       // {ciRelationId}, #{nsId}, #{fromCiId}, #{relationId}, #{toCiId}, #{relationGoid}, #{comments}, #{relationStateId}
+          
+          String INSERT_createRelation="";
+          
+          log.info("creating relation for : ");
+
+          log.info("targetNsPath_createRelation: "+targetNsPath_createRelation);
+          log.info("relationName: "+relationName);
+          log.info("targetCMSCIRelationId: "+targetCMSCIRelationId);
+          log.info("fromCiId: "+fromCiId);
+          log.info("toCiId: "+toCiId);
+          
+          log.info("INSERT_createRelation    : "+INSERT_createRelation);
+          //preparedStatement = conn.prepareStatement(INSERT_createRelation);
+         // preparedStatement.setString(1, targetNsPath);
+         // preparedStatement.setString(2, targetToCMSCIClazzName);
+          
+          //log.info("preparedStatement: "+preparedStatement);
+          
+          //create relation
+          
+        }
+        
+      }
+      
+      
+      
+      
+      
+      
+      
+    } catch (Exception e) {
+      throw new RuntimeException("Error while fetching records" +e.getMessage());
+    }
+    
+    
+    
+    
 
   }
 
   private void process_DELETE_RELATION(
+      CmsCIRelationAndRelationAttributesActionMappingsModel mapping) {
+
+    List<Integer> fromCiIds= new ArrayList<Integer>();
+    
+    if (mapping.getSourceCmsCiRelationName().contains(".Requires")) {
+      fromCiIds=dal.getCiIdsForNsAndClazz(ns, mapping.getSourceFromCmsCiClazzName());
+    } else {
+      fromCiIds=dal.getCiIdsForNsAndClazz(nsForPlatformCiComponents, mapping.getSourceFromCmsCiClazzName());
+    }
+    log.info("fromCiIds size<{}>, fromCiIds: {} ",fromCiIds.size(),fromCiIds.toString());
+
+    List<Integer> toCiIds= dal.getCiIdsForNsAndClazz(nsForPlatformCiComponents, mapping.getSourceToCmsCiClazzName());
+    log.info("toCiIds size<{}>, toCiIds: {} ",toCiIds.size(),toCiIds.toString());
+
+    dal.deleteCiRelations(mapping.getSourceFromCmsCiClazzName(), fromCiIds, mapping.getSourceToCmsCiClazzName(), toCiIds, mapping.getSourceCmsCiRelationId(), mapping.getSourceCmsCiRelationName(), nsForPlatformCiComponents);
+
+  }
+  
+  private void process_DELETE_RELATIONV2(
       CmsCIRelationAndRelationAttributesActionMappingsModel mapping) {
 
     String targetNsPath;

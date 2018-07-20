@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.google.gson.Gson;
 import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.config.SqlQueries;
+import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.dal.KloopzCmDal;
 import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.exception.UnSupportedTransformationMappingException;
 import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.model.CmsCiAndCmsCiAttributesActionMappingsModel;
 import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.util.CircuitconsolidationUtil;
@@ -22,12 +23,8 @@ public class CMSCIMappingsProcessor {
   String envName;
   String nsForPlatformCiComponents;
   Connection conn;
+  KloopzCmDal dal;
   
-
-  CMSCIMappingsProcessor(String nsForPlatformCiComponents, Connection conn) {
-    setNsForPlatformCiComponents(nsForPlatformCiComponents);
-    setConn(conn);
-  }
 
   CMSCIMappingsProcessor(String ns,  String platformName, String ooPhase, String envName, Connection conn) {
     
@@ -37,11 +34,18 @@ public class CMSCIMappingsProcessor {
     setEnvName(envName);
     setConn(conn);
     setNsForPlatformCiComponents(CircuitconsolidationUtil.getnsForPlatformCiComponents(ns, platformName, ooPhase, envName));
+    setDal(new KloopzCmDal(conn));
     
   }
 
   
   
+  public void setDal(KloopzCmDal dal) {
+    this.dal = dal;
+  }
+
+
+
   public void setNs(String ns) {
     this.ns = ns;
   }
@@ -71,6 +75,16 @@ public class CMSCIMappingsProcessor {
    * (CMCI,UPDATE_CMCI_CLAZZID_CLAZZNAME_GOID) (CMCI_ATTRIBUTE,DELETE_SOURCE_ATTRIBUTE_ID)
    * (CMCI_ATTRIBUTE,SET_DEFAULT_ATTRIBUTE_VALUE) (CMCI_ATTRIBUTE,UPDATE_SOURCE_ATTRIBUTE_ID)
    * 
+   * 
+   * NEW Scenarios: 
+   * (SWITCH_CMCI_CLAZZID_CLAZZNAME_GOID,CMSCI) - covered
+   * (DELETE_CMSCI,CMSCI)
+     (CREATE_CMSCI,CMSCI)
+     
+     (DELETE_CMSCI_ATTRIBUTE,CMSCI_ATTRIBUTE) - covered
+     (SET_DEFAULT_CMSCI_ATTRIBUTE_VALUE,CMSCI_ATTRIBUTE) - covered
+     (SWITCH_CMSCI_ATTRIBUTE_ID,CMSCI_ATTRIBUTE)- covered
+ 
    */
   public void processCMSCIMappings(List<CmsCiAndCmsCiAttributesActionMappingsModel> mappingsList) {
     Gson gson = new Gson();
@@ -80,13 +94,22 @@ public class CMSCIMappingsProcessor {
       String entityType = mapping.getEntityType();
       String action = mapping.getAction();
 
-      if (entityType.equalsIgnoreCase("CMCI")) {
+      if (entityType.equalsIgnoreCase("CMSCI")) {
 
         switch (action) {
-          case "UPDATE_CMCI_CLAZZID_CLAZZNAME_GOID":
-            process_UPDATE_CMCI_CLAZZID_CLAZZNAME_GOID(mapping);
+          case "SWITCH_CMCI_CLAZZID_CLAZZNAME_GOID":
+            process_SWITCH_CMCI_CLAZZID_CLAZZNAME_GOID(mapping);
             break;
 
+          case "DELETE_CMSCI":
+            process_DELETE_CMSCI(mapping);
+            break;
+
+          case "CREATE_CMSCI":
+            process_CREATE_CMSCI(mapping);
+            break;
+    
+            
           default:
             throw new UnSupportedTransformationMappingException(
                 "<action>: " + action + " for <entityType>: " + entityType
@@ -95,19 +118,19 @@ public class CMSCIMappingsProcessor {
 
         }
 
-      } else if (entityType.equalsIgnoreCase("CMCI_ATTRIBUTE")) {
+      } else if (entityType.equalsIgnoreCase("CMSCI_ATTRIBUTE")) {
 
         switch (action) {
-          case "DELETE_SOURCE_ATTRIBUTE_ID":
+          case "DELETE_CMSCI_ATTRIBUTE":
             process_DELETE_SOURCE_ATTRIBUTE_ID(mapping);
             break;
 
-          case "SET_DEFAULT_ATTRIBUTE_VALUE":
+          case "SET_DEFAULT_CMSCI_ATTRIBUTE_VALUE":
             processMapping_SET_DEFAULT_ATTRIBUTE_VALUE(mapping);
             break;
 
-          case "UPDATE_SOURCE_ATTRIBUTE_ID":
-            process_UPDATE_SOURCE_ATTRIBUTE_ID(mapping);
+          case "SWITCH_CMSCI_ATTRIBUTE_ID":
+            process_SWITCH_CMSCI_ATTRIBUTE_ID(mapping);
             break;
 
           default:
@@ -128,54 +151,42 @@ public class CMSCIMappingsProcessor {
 
   }
 
-  private void process_UPDATE_CMCI_CLAZZID_CLAZZNAME_GOID(
+  private void process_CREATE_CMSCI(CmsCiAndCmsCiAttributesActionMappingsModel mapping) {
+    // TODO Auto-generated method stub
+    
+  }
+
+
+
+  private void process_DELETE_CMSCI(CmsCiAndCmsCiAttributesActionMappingsModel mapping) {
+   // List<Integer> ciIdsToDelete=dal.getCiIdsForNsAndClazz(nsForPlatformCiComponents, mapping.getSourceClassname());
+   // log.info("ciIdsToDelete: "+ciIdsToDelete);
+    dal.deleteCmsCisForNsAndClazz(nsForPlatformCiComponents, mapping.getSourceClassname());
+   // System.exit(0);
+
+
+  }
+
+
+
+  private void process_SWITCH_CMCI_CLAZZID_CLAZZNAME_GOID(
       CmsCiAndCmsCiAttributesActionMappingsModel mapping) {
 
-    //TODO: create a Util function to create GOID
-    // from mappings
     String sourceClassName = mapping.getSourceClassname();
     int sourceclassId = mapping.getSourceClassId();
     String targetClassName = mapping.getTargetClassname();
     int targetclassId = mapping.getTargetClassId();
 
-    // from platform
-    String sourcegoid;
-    // set to platform
-    String targetgoid;
-
-    try {
-
-
-
-      String selectSQL = SqlQueries.SQL_SELECT_NakedCMSCIByNsAndClazz;
-  
-      log.info("selectSQL        : "+selectSQL);
-      PreparedStatement preparedStatement = conn.prepareStatement(selectSQL);
-      preparedStatement.setString(1, this.nsForPlatformCiComponents);
-      preparedStatement.setString(2, sourceClassName);
+    List<Integer> ciIds=dal.getCiIdsForNsAndClazz(nsForPlatformCiComponents, sourceClassName);
+    int nsId=dal.getNsIdForNsPath(nsForPlatformCiComponents);
+    
+    for(int ciId: ciIds) {
       
-      log.info("preparedStatement: "+preparedStatement);
-      ResultSet resultSet = preparedStatement.executeQuery();
+      String goid=nsId+"-"+targetclassId+"-"+ciId;
+      dal.cmsCi_update_ciClazzid_clazzname_goid(ciId, sourceClassName, sourceclassId, targetClassName, targetclassId, goid);
       
-      int numberOfRecords=0;
-
-      int numberOfColumns=resultSet.getMetaData().getColumnCount();
-      while (resultSet.next()) {
-        numberOfRecords++;
-        for(int i=1;i<=numberOfColumns;i++) {
-          log.info(resultSet.getMetaData().getColumnLabel(i) +" : " +resultSet.getObject(i));
-          
-        }
-      
-
-
-      }
-      log.info(" SQL_SELECT_NakedCMSCIByNsAndClazz: numberOfRecords: "+numberOfRecords);
-    } catch (Exception e) {
-      throw new RuntimeException("Error while fetching records" +e.getMessage());
     }
-    // operations - UpdateClazzId, UpdateClazzName, UpdateGoid
-
+  
   }
 
   private void process_DELETE_SOURCE_ATTRIBUTE_ID(
@@ -329,7 +340,21 @@ public class CMSCIMappingsProcessor {
     
   }
 
-  private void process_UPDATE_SOURCE_ATTRIBUTE_ID(
+  
+  private void process_SWITCH_CMSCI_ATTRIBUTE_ID(
+      CmsCiAndCmsCiAttributesActionMappingsModel mapping) {
+
+    int sourceAttributeId = mapping.getSourceAttributeId();
+    
+    int targetClassId = mapping.getTargetClassId();
+    int targetAttributeId = mapping.getTargetAttributeId();
+
+    dal.switchCMSCIAttribuetId(this.nsForPlatformCiComponents, targetClassId, targetAttributeId, sourceAttributeId);
+
+  }
+
+  
+  private void process_SWITCH_CMSCI_ATTRIBUTE_IDV2(
       CmsCiAndCmsCiAttributesActionMappingsModel mapping) {
 
     // from mappings
@@ -372,7 +397,7 @@ public class CMSCIMappingsProcessor {
        PreparedStatement preparedStatement = conn.prepareStatement(sql);
        
        preparedStatement.setString(1, this.nsForPlatformCiComponents);
-       preparedStatement.setInt(2, sourceClassId);
+       preparedStatement.setInt(2, targetClassId);
        preparedStatement.setInt(3, sourceAttributeId);
        
        
@@ -395,6 +420,7 @@ public class CMSCIMappingsProcessor {
 
        }
        log.info(" process_UPDATE_SOURCE_ATTRIBUTE_ID: numberOfRecords: "+numberOfRecords);
+       System.exit(0);
 
      } catch (Exception e) {
        throw new RuntimeException("Error while fetching records" +e.getMessage());
@@ -404,6 +430,7 @@ public class CMSCIMappingsProcessor {
     
     
   }
+
 
 
 }

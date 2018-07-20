@@ -1,7 +1,6 @@
 package com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.main;
 
 import java.sql.Connection;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
@@ -13,7 +12,6 @@ import org.testng.annotations.Test;
 import com.google.gson.Gson;
 import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.config.IConstants;
 import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.config.PostgressDbConnection;
-import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.util.CircuitconsolidationUtil;
 import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.util.MappingsCache;
 
 
@@ -57,7 +55,7 @@ public class MappingsProcessorTest {
 
     MappingsCache mappingsCache= new MappingsCache();
     
-    Map<String, List> transformationMappings = mappingsCache.createTransformationMappingsCache(conn);
+    Map<String, List> transformationMappings = mappingsCache.createTransformationMappingsCache(conn, ooPhase);
     log.info("transformationMappings: "+gson.toJson(transformationMappings));
 
     
