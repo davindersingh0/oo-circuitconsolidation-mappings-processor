@@ -268,7 +268,6 @@ public class KloopzCmDal {
 
 
     try {
-      // String selectSQL = SqlQueries.SQL_SELECT_NakedCMSCIByNsAndClazz;
 
       log.info("SQL_DELETE_CMSCIATTRIBUTE        : " + SQL_DELETE_CMSCIATTRIBUTE);
       PreparedStatement preparedStatement = conn.prepareStatement(SQL_DELETE_CMSCIATTRIBUTE);
@@ -276,9 +275,6 @@ public class KloopzCmDal {
       preparedStatement.setString(1, nsForPlatformCiComponents);
       preparedStatement.setInt(2, targetClazzId);
       preparedStatement.setInt(3, sourceClazzAttributeId);
-
-
-      // preparedStatement.setString(1, this.nsForPlatformCiComponents);
 
       log.info("preparedStatement: " + preparedStatement);
       int numberOfRecords = preparedStatement.executeUpdate();
@@ -293,4 +289,130 @@ public class KloopzCmDal {
 
   }
 
+  public int getNext_cm_pk_seqId() {
+
+    try {
+
+      String SQL_SELECT_NextCiId = "SELECT nextval('cm_pk_seq');";
+
+      log.info("SQL_SELECT_NextCiId: " + SQL_SELECT_NextCiId);
+      PreparedStatement preparedStatement = conn.prepareStatement(SQL_SELECT_NextCiId);
+
+      log.info("preparedStatement: " + preparedStatement);
+      ResultSet resultSet = preparedStatement.executeQuery();
+
+      while (resultSet.next()) {
+        int nextVal = resultSet.getInt("nextval");
+        log.info("nextVal: " + nextVal);
+        return nextVal;
+
+      }
+    } catch (Exception e) {
+      throw new RuntimeException("Error while fetching records" + e.getMessage());
+    }
+    throw new RuntimeException("Unable to retrive next CiId");
+
+  }
+
+  public void createCMSCI(int nsId, int ciId, int targetClazzId, String ciName, String goid,
+      int ciStateId, String comments, String createdBy) {
+
+    /*
+     * insert into cm_ci (ci_id, ns_id, class_id, ci_name, ci_goid, comments, ci_state_id,
+     * last_applied_rfc_id, created_by) values (p_ci_id, p_ns_id, p_class_id, p_ci_name, p_goid,
+     * p_comments, p_state_id, p_last_rfc_id, p_created_by);
+     * 
+     * insert into cms_ci_event_queue(event_id, source_pk, source_name, event_type_id) values
+     * (nextval('event_pk_seq'), p_ci_id, 'cm_ci' , 100);
+     * 
+     * insert into cm_ci_log(log_id, log_time, log_event, ci_id, ci_name, class_id, class_name,
+     * comments, ci_state_id, ci_state_id_old, created_by) values (nextval('log_pk_seq'), now(),
+     * 100, p_ci_id, p_ci_name, p_class_id, l_class_name, p_comments, p_state_id, p_state_id,
+     * p_created_by);
+     */
+
+    try {
+
+      /*
+       * String SQL_INSERT_CreateNewCMSCI =
+       * "insert into cm_ci (ci_id, ns_id, class_id, ci_name, ci_goid, comments, ci_state_id, last_applied_rfc_id, created_by) "
+       * +
+       * "values (p_ci_id, p_ns_id, p_class_id, p_ci_name, p_goid, p_comments, p_state_id, p_last_rfc_id, p_created_by);"
+       * ;
+       */
+      String SQL_INSERT_CreateNewCMSCI =
+          "INSERT INTO cm_ci (ci_id, ns_id, class_id, ci_name, ci_goid, comments, ci_state_id, created_by) "
+              + "VALUES (?, ?, ?, ?, ?, ?, ?, ?);";
+
+      log.info("SQL_INSERT_CreateNewCMSCI: " + SQL_INSERT_CreateNewCMSCI);
+      PreparedStatement preparedStatement = conn.prepareStatement(SQL_INSERT_CreateNewCMSCI);
+
+      preparedStatement.setInt(1, ciId);
+      preparedStatement.setInt(2, nsId);
+      preparedStatement.setInt(3, targetClazzId);
+      preparedStatement.setString(4, ciName);
+      preparedStatement.setString(5, goid);
+      preparedStatement.setString(6, comments);
+      preparedStatement.setInt(7, ciStateId);
+      preparedStatement.setString(8, createdBy);
+
+      log.info("preparedStatement: " + preparedStatement);
+
+      int numberOfInserts = preparedStatement.executeUpdate();
+      log.info("numberOfInserts: {}", numberOfInserts);
+
+
+    } catch (Exception e) {
+      throw new RuntimeException("Error while creating new CMSCI " + e.getMessage());
+    }
+
+  }
+
+  public void createNewCMSCIAttributeWithDefaultValue(int ci_attribute_id, int ci_id,
+      int attribute_id, String targetDefaultValue, String owner,
+      String comments) {
+    
+    
+    // TODO Auto-generated method stub
+/*    insert into cm_ci_attributes (ci_attribute_id, ci_id, attribute_id, df_attribute_value, dj_attribute_value, owner, comments)
+    values (nextval('cm_pk_seq'), p_ci_id, p_attribute_id, p_df_value, p_dj_value, p_owner, p_comments)
+    returning ci_attribute_id into out_ci_attr_id;
+
+    insert into cm_ci_attribute_log(log_id, log_time, log_event, ci_id, ci_attribute_id, attribute_id, attribute_name, comments, owner, dj_attribute_value, dj_attribute_value_old, df_attribute_value, df_attribute_value_old) 
+    values (nextval('log_pk_seq'), now(), 100, p_ci_id, out_ci_attr_id, p_attribute_id, l_attribute_name, p_comments, p_owner, p_dj_value, p_dj_value, p_df_value, p_df_value);
+
+    if p_event = true then
+        insert into cms_ci_event_queue(event_id, source_pk, source_name, event_type_id)
+        values (nextval('event_pk_seq'), p_ci_id, 'cm_ci' , 200);
+    */
+    
+
+    try {
+
+      String SQL_INSERT_AddNewCMSCIAttributeWithDefaultValue =
+          "INSERT INTO cm_ci_attributes (ci_attribute_id, ci_id, attribute_id, df_attribute_value, dj_attribute_value, owner, comments) "
+              + "VALUES (?, ?, ?, ?, ?, ?, ?);";
+
+      log.info("SQL_INSERT_AddNewCMSCIAttributeWithDefaultValue: "
+          + SQL_INSERT_AddNewCMSCIAttributeWithDefaultValue);
+      PreparedStatement preparedStatement =
+          conn.prepareStatement(SQL_INSERT_AddNewCMSCIAttributeWithDefaultValue);
+
+      preparedStatement.setInt(1, ci_attribute_id);
+      preparedStatement.setInt(2, ci_id);
+      preparedStatement.setInt(3, attribute_id);
+      preparedStatement.setString(4, targetDefaultValue);
+      preparedStatement.setString(5, targetDefaultValue);
+      preparedStatement.setString(6, owner);
+      preparedStatement.setString(7, comments);
+
+
+      log.info("preparedStatement: " + preparedStatement);
+
+    } catch (Exception e) {
+      throw new RuntimeException("Error while creating new CMSCI " + e.getMessage());
+    }
+
+  }
+  
 }
