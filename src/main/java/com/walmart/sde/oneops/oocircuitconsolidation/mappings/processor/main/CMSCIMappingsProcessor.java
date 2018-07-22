@@ -122,7 +122,7 @@ public class CMSCIMappingsProcessor {
 
         switch (action) {
           case "DELETE_CMSCI_ATTRIBUTE":
-            process_DELETE_SOURCE_ATTRIBUTE_ID(mapping);
+            process_DELETE_CMSCI_ATTRIBUTE(mapping);
             break;
 
           case "SET_DEFAULT_CMSCI_ATTRIBUTE_VALUE":
@@ -189,7 +189,24 @@ public class CMSCIMappingsProcessor {
   
   }
 
-  private void process_DELETE_SOURCE_ATTRIBUTE_ID(
+  private void process_DELETE_CMSCI_ATTRIBUTE(
+      CmsCiAndCmsCiAttributesActionMappingsModel mapping) {
+
+    
+    // from mappings
+    String sourceClazz = mapping.getSourceClassname();
+    int sourceClazzId = mapping.getSourceClassId();
+    String sourceClazzAttributeName = mapping.getSourceAttributeName();
+    int sourceClazzAttributeId = mapping.getSourceAttributeId();
+
+    String targetClazz = mapping.getTargetClassname();
+    int targetClazzId = mapping.getTargetClassId();
+    
+    dal.deleteCMSCIAttribute(this.nsForPlatformCiComponents, sourceClazz, sourceClazzId, sourceClazzAttributeId, sourceClazzAttributeName, targetClazz, targetClazzId);
+
+  }
+  
+  private void process_DELETE_SOURCE_ATTRIBUTE_IDV2(
       CmsCiAndCmsCiAttributesActionMappingsModel mapping) {
 
 
@@ -335,8 +352,7 @@ public class CMSCIMappingsProcessor {
  
     
     //TODO: WIP
-    
-    
+        
     
   }
 

@@ -139,7 +139,7 @@ public class KloopzCmDal {
 
   }
 
-  
+
   public int getNsIdForNsPath(String nsForPlatformCiComponents) {
 
     List<Integer> nsIds = new ArrayList<Integer>();
@@ -160,7 +160,8 @@ public class KloopzCmDal {
 
       }
 
-      log.info("numberOfRecords {} for nsForPlatformCiComponents {} : nsIds {}", numberOfRecords, nsForPlatformCiComponents, nsIds.toString());
+      log.info("numberOfRecords {} for nsForPlatformCiComponents {} : nsIds {}", numberOfRecords,
+          nsForPlatformCiComponents, nsIds.toString());
       if (numberOfRecords == 0 || numberOfRecords > 1) {
         throw new RuntimeException("numberOfRecords " + numberOfRecords
             + " invalid for nsForPlatformCiComponents :" + nsForPlatformCiComponents);
@@ -172,8 +173,8 @@ public class KloopzCmDal {
 
     return nsIds.get(0);
   }
-  
-  
+
+
   public void cmsCi_update_ciClazzid_clazzname_goid(int ciId, String fromClazz, int fromClazzId,
       String toClazz, int toClazzId, String goid) {
 
@@ -185,7 +186,7 @@ public class KloopzCmDal {
 
       log.info("SQL_UPDATE_CMSCI_ciClazzid_clazzname_goid: "
           + SQL_UPDATE_CMSCI_ciClazzid_clazzname_goid);
-      
+
       PreparedStatement preparedStatement =
           conn.prepareStatement(SQL_UPDATE_CMSCI_ciClazzid_clazzname_goid);
 
@@ -212,39 +213,84 @@ public class KloopzCmDal {
 
   }
 
-  public void switchCMSCIAttribuetId(String nsForPlatformCiComponents, int updatedTargetClazzId, int targetAttributeId, int sourceAttributeId) {
-  
-    String SQL_UPDATE_CMSCI_switchAttributeId =  "UPDATE cm_ci_attributes set attribute_id=? where ci_attribute_id in "
-        + "(SELECT ci_attribute_id from cm_ci_attributes ca, md_class_attributes cla, cm_ci ci, ns_namespaces ns "
-        + "where "+
-        "ca.ci_id=ci.ci_id "+
-        "and ci.ns_id = ns.ns_id "+
-        "and ca.attribute_id=cla.attribute_id "+
-        "and ns.ns_path =? "+
-        "and ci.class_id=? "+
-        "and ca.attribute_id=?); ";
-        
+  public void switchCMSCIAttribuetId(String nsForPlatformCiComponents, int updatedTargetClazzId,
+      int targetAttributeId, int sourceAttributeId) {
+
+    String SQL_UPDATE_CMSCI_switchAttributeId =
+        "UPDATE cm_ci_attributes set attribute_id=? where ci_attribute_id in "
+            + "(SELECT ci_attribute_id from cm_ci_attributes ca, md_class_attributes cla, cm_ci ci, ns_namespaces ns "
+            + "where " + "ca.ci_id=ci.ci_id " + "and ci.ns_id = ns.ns_id "
+            + "and ca.attribute_id=cla.attribute_id " + "and ns.ns_path =? " + "and ci.class_id=? "
+            + "and ca.attribute_id=?); ";
+
 
     try {
-    
-       log.info("SQL_UPDATE_CMSCI_switchAttributeId        : "+SQL_UPDATE_CMSCI_switchAttributeId);
-       PreparedStatement preparedStatement = conn.prepareStatement(SQL_UPDATE_CMSCI_switchAttributeId);
-       
-       preparedStatement.setInt(1, targetAttributeId);
-       preparedStatement.setString(2, nsForPlatformCiComponents);
-       preparedStatement.setInt(3, updatedTargetClazzId);
-       preparedStatement.setInt(4, sourceAttributeId);
 
-       
-       log.info("preparedStatement: "+preparedStatement);
-       
-       int numberOfUpdatedRecords = preparedStatement.executeUpdate();
-       log.info("numberOfUpdatedRecords for SQL_UPDATE_CMSCI_switchAttributeId: {} ",numberOfUpdatedRecords);
+      log.info("SQL_UPDATE_CMSCI_switchAttributeId        : " + SQL_UPDATE_CMSCI_switchAttributeId);
+      PreparedStatement preparedStatement =
+          conn.prepareStatement(SQL_UPDATE_CMSCI_switchAttributeId);
 
-       } catch (Exception e) {
-       throw new RuntimeException("Error while fetching records" +e.getMessage());
-     }
-    
+      preparedStatement.setInt(1, targetAttributeId);
+      preparedStatement.setString(2, nsForPlatformCiComponents);
+      preparedStatement.setInt(3, updatedTargetClazzId);
+      preparedStatement.setInt(4, sourceAttributeId);
+
+
+      log.info("preparedStatement: " + preparedStatement);
+
+      int numberOfUpdatedRecords = preparedStatement.executeUpdate();
+      log.info("numberOfUpdatedRecords for SQL_UPDATE_CMSCI_switchAttributeId: {} ",
+          numberOfUpdatedRecords);
+
+    } catch (Exception e) {
+      throw new RuntimeException("Error while fetching records" + e.getMessage());
+    }
+
+  }
+
+  public void deleteCMSCIAttribute(String nsForPlatformCiComponents, String sourceClazz,
+      int sourceClazzId, int sourceClazzAttributeId, String sourceClazzAttributeName,
+      String targetClazz, int targetClazzId) {
+
+
+    log.info(
+        "deleting CMSCIAttribute from attributes targetClazz <{}> targetClazzId <{}> sourceClazzAttributeId <{}> sourceClazzAttributeName <{}> belonging to sourceClazz <{}> sourceClazzId <{}>",
+        targetClazz, targetClazzId, sourceClazzAttributeId, sourceClazzAttributeName, sourceClazz,
+        sourceClazzId);
+
+
+    String SQL_DELETE_CMSCIATTRIBUTE =
+        "DELETE from cm_ci_attributes where ci_attribute_id in ( select ca.ci_attribute_id "
+            + "from cm_ci_attributes ca, md_class_attributes cla, cm_ci ci, ns_namespaces ns "
+            + "where " + "ca.ci_id=ci.ci_id " + "and ci.ns_id = ns.ns_id "
+            + "and ca.attribute_id=cla.attribute_id " + "and ns.ns_path =? " + "and ci.class_id=? "
+            + "and ca.attribute_id=?); ";
+
+
+    try {
+      // String selectSQL = SqlQueries.SQL_SELECT_NakedCMSCIByNsAndClazz;
+
+      log.info("SQL_DELETE_CMSCIATTRIBUTE        : " + SQL_DELETE_CMSCIATTRIBUTE);
+      PreparedStatement preparedStatement = conn.prepareStatement(SQL_DELETE_CMSCIATTRIBUTE);
+
+      preparedStatement.setString(1, nsForPlatformCiComponents);
+      preparedStatement.setInt(2, targetClazzId);
+      preparedStatement.setInt(3, sourceClazzAttributeId);
+
+
+      // preparedStatement.setString(1, this.nsForPlatformCiComponents);
+
+      log.info("preparedStatement: " + preparedStatement);
+      int numberOfRecords = preparedStatement.executeUpdate();
+
+      log.info("Number of CMSCI attributes deleted: {}", numberOfRecords);
+
+    } catch (Exception e) {
+      throw new RuntimeException("Error while fetching records" + e.getMessage());
+    }
+
+
+
   }
 
 }
