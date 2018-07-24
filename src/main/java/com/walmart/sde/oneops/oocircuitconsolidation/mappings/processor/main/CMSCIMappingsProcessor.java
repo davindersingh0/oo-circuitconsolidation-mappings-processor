@@ -234,6 +234,7 @@ public class CMSCIMappingsProcessor {
 
   }
 
+  @Deprecated
   private void process_DELETE_SOURCE_ATTRIBUTE_IDV2(
       CmsCiAndCmsCiAttributesActionMappingsModel mapping) {
 
@@ -302,19 +303,30 @@ public class CMSCIMappingsProcessor {
     List<Integer> ciIds =
         dal.getCiIdsForNsAndClazz(this.nsForPlatformCiComponents, targetClassName);
 
+    log.info(
+        "Adding CMSCI Attribute for CiIds {}, targetClassName <{}> targetClassId <{}> , targetAttributeName <{}> targetAttributeId <{}> with default value <{}>",
+        ciIds.toString(), targetClassName, targetClassId, targetAttributeName, targetAttributeId,
+        targetDefaultValue);
+    
+    
     for (int ciId : ciIds) {
-      
+      log.info(
+          "Adding CMSCI Attribute for CiId {}, targetClassName <{}> targetClassId <{}> , targetAttributeName <{}> targetAttributeId <{}> with default value <{}>",
+          ciId, targetClassName, targetClassId, targetAttributeName, targetAttributeId,
+          targetDefaultValue);
       int ci_attribute_id = dal.getNext_cm_pk_seqId();
-     
+
       dal.createNewCMSCIAttributeWithDefaultValue(ci_attribute_id, ciId, targetAttributeId,
           targetDefaultValue, IConstants.CIRCUIT_CONSOLIDATION_USER,
           IConstants.CIRCUIT_CONSOLIDATION_COMMENTS);
 
     }
 
+   
 
   }
 
+  @Deprecated
   private void processMapping_SET_DEFAULT_ATTRIBUTE_VALUE_V2(
       CmsCiAndCmsCiAttributesActionMappingsModel mapping) {
     // from mappings
@@ -417,6 +429,7 @@ public class CMSCIMappingsProcessor {
   }
 
 
+  @Deprecated
   private void process_SWITCH_CMSCI_ATTRIBUTE_IDV2(
       CmsCiAndCmsCiAttributesActionMappingsModel mapping) {
 
@@ -470,8 +483,6 @@ public class CMSCIMappingsProcessor {
           log.info(resultSet.getMetaData().getColumnLabel(i) + " : " + resultSet.getObject(i));
 
         }
-
-
 
       }
       log.info(" process_UPDATE_SOURCE_ATTRIBUTE_ID: numberOfRecords: " + numberOfRecords);

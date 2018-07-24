@@ -369,23 +369,25 @@ public class KloopzCmDal {
   }
 
   public void createNewCMSCIAttributeWithDefaultValue(int ci_attribute_id, int ci_id,
-      int attribute_id, String targetDefaultValue, String owner,
-      String comments) {
-    
-    
+      int attribute_id, String targetDefaultValue, String owner, String comments) {
+
+
     // TODO Auto-generated method stub
-/*    insert into cm_ci_attributes (ci_attribute_id, ci_id, attribute_id, df_attribute_value, dj_attribute_value, owner, comments)
-    values (nextval('cm_pk_seq'), p_ci_id, p_attribute_id, p_df_value, p_dj_value, p_owner, p_comments)
-    returning ci_attribute_id into out_ci_attr_id;
+    /*
+     * insert into cm_ci_attributes (ci_attribute_id, ci_id, attribute_id, df_attribute_value,
+     * dj_attribute_value, owner, comments) values (nextval('cm_pk_seq'), p_ci_id, p_attribute_id,
+     * p_df_value, p_dj_value, p_owner, p_comments) returning ci_attribute_id into out_ci_attr_id;
+     * 
+     * insert into cm_ci_attribute_log(log_id, log_time, log_event, ci_id, ci_attribute_id,
+     * attribute_id, attribute_name, comments, owner, dj_attribute_value, dj_attribute_value_old,
+     * df_attribute_value, df_attribute_value_old) values (nextval('log_pk_seq'), now(), 100,
+     * p_ci_id, out_ci_attr_id, p_attribute_id, l_attribute_name, p_comments, p_owner, p_dj_value,
+     * p_dj_value, p_df_value, p_df_value);
+     * 
+     * if p_event = true then insert into cms_ci_event_queue(event_id, source_pk, source_name,
+     * event_type_id) values (nextval('event_pk_seq'), p_ci_id, 'cm_ci' , 200);
+     */
 
-    insert into cm_ci_attribute_log(log_id, log_time, log_event, ci_id, ci_attribute_id, attribute_id, attribute_name, comments, owner, dj_attribute_value, dj_attribute_value_old, df_attribute_value, df_attribute_value_old) 
-    values (nextval('log_pk_seq'), now(), 100, p_ci_id, out_ci_attr_id, p_attribute_id, l_attribute_name, p_comments, p_owner, p_dj_value, p_dj_value, p_df_value, p_df_value);
-
-    if p_event = true then
-        insert into cms_ci_event_queue(event_id, source_pk, source_name, event_type_id)
-        values (nextval('event_pk_seq'), p_ci_id, 'cm_ci' , 200);
-    */
-    
 
     try {
 
@@ -414,5 +416,168 @@ public class KloopzCmDal {
     }
 
   }
-  
+
+  public void createCMSCIRelation(int ci_relation_id, int ns_id, int from_ci_id,
+      String relation_goid, int relation_id, int to_ci_id, int ci_state_id, String comments) {
+
+    // {call cm_create_relation(#{ciRelationId}, #{nsId}, #{fromCiId}, #{relationId}, #{toCiId},
+    // #{relationGoid}, #{comments}, #{relationStateId})}
+
+    /*
+     * insert into cm_ci_relations (ci_relation_id, ns_id, from_ci_id, relation_goid, relation_id,
+     * to_ci_id, ci_state_id, comments, last_applied_rfc_id) values (p_ci_relation_id, p_ns_id,
+     * p_from_ci_id, p_rel_goid, p_relation_id, p_to_ci_id, p_state_id, p_comments, p_last_rfc_id);
+     * 
+     * insert into cms_ci_event_queue(event_id, source_pk, source_name, event_type_id) values
+     * (nextval('event_pk_seq'), p_ci_relation_id, 'cm_ci_rel' , 200);
+     * 
+     * insert into cm_ci_relation_log(log_id, log_time, log_event, ci_relation_id, from_ci_id,
+     * to_ci_id, ci_state_id, ci_state_id_old, comments) values (nextval('log_pk_seq'), now(), 100,
+     * p_ci_relation_id, p_from_ci_id, p_to_ci_id, p_state_id, p_state_id, p_comments); exception
+     * when integrity_constraint_violation then raise notice '% %', sqlerrm, sqlstate;
+     * 
+     */
+
+
+    try {
+
+      String SQL_INSERT_CreateNewCMSIRelation =
+          "insert into cm_ci_relations (ci_relation_id, ns_id, from_ci_id, relation_goid, relation_id, to_ci_id, ci_state_id, comments) "
+              + "values (?, ?, ?, ?, ?, ?, ?, ?);";
+
+
+      log.info("SQL_INSERT_CreateNewCMSIRelation: " + SQL_INSERT_CreateNewCMSIRelation);
+
+      PreparedStatement preparedStatement = conn.prepareStatement(SQL_INSERT_CreateNewCMSIRelation);
+
+      preparedStatement.setInt(1, ci_relation_id);
+      preparedStatement.setInt(2, ns_id);
+      preparedStatement.setInt(3, from_ci_id);
+      preparedStatement.setString(4, relation_goid);
+      preparedStatement.setInt(5, relation_id);
+      preparedStatement.setInt(6, to_ci_id);
+      preparedStatement.setInt(7, ci_state_id);
+      preparedStatement.setString(8, comments);
+
+
+      log.info("preparedStatement: " + preparedStatement);
+     
+      int numberOfRecords = preparedStatement.executeUpdate();
+      log.info("numberOfRecords for SQL_INSERT_CreateNewCMSIRelation {}", numberOfRecords);
+
+
+    } catch (Exception e) {
+      throw new RuntimeException("Error while creating new CMSCIRelation " + e.getMessage());
+    }
+
+
+  }
+
+  public void createCMSCIRelationAttribute(int ci_rel_attribute_id, int ci_relation_id,
+      int attribute_id, String df_attribute_value, String dj_attribute_value, String owner,
+      String comments) {
+
+    // {call cm_add_ci_rel_attribute(#{ciRelationId}, #{attributeId}, #{dfValue}, #{djValue},
+    // #{owner}, #{comments}, true)}
+
+    /*
+     * insert into cm_ci_relation_attributes (ci_rel_attribute_id, ci_relation_id, attribute_id,
+     * df_attribute_value, dj_attribute_value, owner, comments) values (nextval('cm_pk_seq'),
+     * p_ci_rel_id, p_attribute_id, p_df_value, p_dj_value, p_owner, p_comments) returning
+     * ci_rel_attribute_id into out_ci_rel_attr_id;
+     * 
+     * insert into cm_ci_relation_attr_log(log_id, log_time, log_event, ci_relation_id,
+     * ci_rel_attribute_id, attribute_id, attribute_name, comments, owner, dj_attribute_value,
+     * dj_attribute_value_old, df_attribute_value, df_attribute_value_old) values
+     * (nextval('log_pk_seq'), now(), 100, p_ci_rel_id, out_ci_rel_attr_id, p_attribute_id,
+     * l_attribute_name, p_comments, p_owner, p_dj_value, p_dj_value, p_df_value, p_df_value);
+     * 
+     * if p_event = true then insert into cms_ci_event_queue(event_id, source_pk, source_name,
+     * event_type_id) values (nextval('event_pk_seq'), p_ci_rel_id, 'cm_ci_rel' , 200); end if;
+     */
+
+    try {
+
+      String SQL_INSERT_CreateNewCMSIRelationAttribute =
+          "insert into cm_ci_relation_attributes (ci_rel_attribute_id, ci_relation_id, attribute_id, df_attribute_value, dj_attribute_value, owner, comments) "
+              + "values (?, ?, ?, ?, ?, ?, ?);";
+
+
+      log.info("SQL_INSERT_CreateNewCMSIRelationAttribute: "
+          + SQL_INSERT_CreateNewCMSIRelationAttribute);
+
+      PreparedStatement preparedStatement =
+          conn.prepareStatement(SQL_INSERT_CreateNewCMSIRelationAttribute);
+
+      preparedStatement.setInt(1, ci_rel_attribute_id);
+      preparedStatement.setInt(2, ci_relation_id);
+      preparedStatement.setInt(3, attribute_id);
+      preparedStatement.setString(4, df_attribute_value);
+      preparedStatement.setString(5, dj_attribute_value);
+      preparedStatement.setString(6, owner);
+      preparedStatement.setString(7, comments);
+
+      log.info("preparedStatement: " + preparedStatement);
+      int numberOfRecords = preparedStatement.executeUpdate();
+      
+      log.info("numberOfRecords for SQL_INSERT_CreateNewCMSIRelationAttribute {}", numberOfRecords);
+    } catch (Exception e) {
+      throw new RuntimeException("Error while creating new CMSCIRelation " + e.getMessage());
+    }
+
+
+  }
+
+
+  public List<Integer> getCMSCIRelationIds_By_Ns_RelationName_FromClazzToClazz(String ns_path,
+      String relation_name, String fromClazz, String toClazz) {
+
+
+    List<Integer> cmsCiRelationIds = new ArrayList<Integer>();
+    try {
+
+      String SQL_SELECT_CMSCIRelationIds_By_Ns_RelationName_FromClazzToClazz =
+          "select cir.ci_relation_id from "
+              + "cm_ci_relations cir, md_relations mdr, cm_ci_state cis, cm_ci from_ci, md_classes from_mdc, cm_ci to_ci, md_classes to_mdc, ns_namespaces ns"
+              + " where ns.ns_path=?  and cir.ns_id = ns.ns_id "
+              + " and cir.ci_state_id = cis.ci_state_id  and cir.relation_id = mdr.relation_id  "
+              + " and mdr.relation_name = ?  and cir.from_ci_id = from_ci.ci_id "
+              + " and from_ci.class_id = from_mdc.class_id   and from_mdc.class_name = ? "
+              + " and cir.to_ci_id = to_ci.ci_id  and to_ci.class_id = to_mdc.class_id "
+              + " and to_mdc.class_name = ? ";
+
+
+      log.info("SQL_SELECT_CMSCIRelationIds_By_Ns_RelationName_FromClazzToClazz: "
+          + SQL_SELECT_CMSCIRelationIds_By_Ns_RelationName_FromClazzToClazz);
+
+      PreparedStatement preparedStatement =
+          conn.prepareStatement(SQL_SELECT_CMSCIRelationIds_By_Ns_RelationName_FromClazzToClazz);
+
+      preparedStatement.setString(1, ns_path);
+      preparedStatement.setString(2, relation_name);
+      preparedStatement.setString(3, fromClazz);
+      preparedStatement.setString(4, toClazz);
+
+
+      log.info("preparedStatement: " + preparedStatement);
+      ResultSet resultSet = preparedStatement.executeQuery();
+
+      int numberOfRecords = 0;
+      while (resultSet.next()) {
+        cmsCiRelationIds.add(resultSet.getInt("ci_relation_id"));
+        numberOfRecords++;
+      }
+      log.info(
+          "Number of CmsCiRelations: <{}> for ns_path <{}> relation_name <{}> fromClazz <{}> toClazz <{}>",
+          numberOfRecords, ns_path, relation_name, fromClazz, toClazz);
+
+
+    } catch (Exception e) {
+      throw new RuntimeException("Error while fetching records" + e.getMessage());
+    }
+
+
+    return cmsCiRelationIds;
+  }
+
 }
