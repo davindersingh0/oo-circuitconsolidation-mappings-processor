@@ -90,6 +90,10 @@ public class CMSCIMappingsProcessor {
   public void processCMSCIMappings(List<CmsCiAndCmsCiAttributesActionMappingsModel> mappingsList) {
     Gson gson = new Gson();
 
+    //update source property of platform from walmartLabs to oneops
+    dal.updatePlatformSourceProperty(ns, platformName);
+    
+    
     for (CmsCiAndCmsCiAttributesActionMappingsModel mapping : mappingsList) {
 
       String entityType = mapping.getEntityType();
@@ -496,6 +500,6 @@ public class CMSCIMappingsProcessor {
 
   }
 
-
+  
 
 }

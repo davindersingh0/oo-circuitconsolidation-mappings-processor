@@ -461,7 +461,7 @@ public class KloopzCmDal {
 
 
       log.info("preparedStatement: " + preparedStatement);
-     
+
       int numberOfRecords = preparedStatement.executeUpdate();
       log.info("numberOfRecords for SQL_INSERT_CreateNewCMSIRelation {}", numberOfRecords);
 
@@ -519,7 +519,7 @@ public class KloopzCmDal {
 
       log.info("preparedStatement: " + preparedStatement);
       int numberOfRecords = preparedStatement.executeUpdate();
-      
+
       log.info("numberOfRecords for SQL_INSERT_CreateNewCMSIRelationAttribute {}", numberOfRecords);
     } catch (Exception e) {
       throw new RuntimeException("Error while creating new CMSCIRelation " + e.getMessage());
@@ -578,6 +578,47 @@ public class KloopzCmDal {
 
 
     return cmsCiRelationIds;
+  }
+
+  public void updatePlatformSourceProperty(String ns, String platformName) {
+
+    try {
+
+      String SQL_UPDATE_PlatformSourceProperty = "UPDATE cm_ci_attributes "
+          + " set df_attribute_value='oneops', dj_attribute_value='oneops' "
+          + " where ci_attribute_id="
+          + " (SELECT ca.ci_attribute_id from cm_ci_attributes ca, md_class_attributes cla, cm_ci ci, ns_namespaces ns "
+          + " where ca.ci_id=ci.ci_id and ci.ns_id = ns.ns_id "
+          + " and ca.attribute_id=cla.attribute_id "
+          + " and cla.attribute_name='source' "
+          + " and ns.ns_path =? "
+          + " and ci.ci_name=?); ";
+
+      
+      log.info("SQL_UPDATE_PlatformSourceProperty: " + SQL_UPDATE_PlatformSourceProperty);
+
+      PreparedStatement preparedStatement =
+          conn.prepareStatement(SQL_UPDATE_PlatformSourceProperty);
+
+      preparedStatement.setString(1, ns);
+      preparedStatement.setString(2, platformName);
+
+
+      log.info("preparedStatement: " + preparedStatement);
+      int numberOfRecords = preparedStatement.executeUpdate();
+      if (numberOfRecords != 1) {
+        throw new RuntimeException(
+            "updatePlatformSourceProperty function should update 1 record however numberOfRecords= :"
+                + numberOfRecords);
+      }
+      log.info("platform source updated to <oneops> for ns <{}> and platformName <{}>", ns,
+          platformName);
+
+    } catch (Exception e) {
+      throw new RuntimeException(
+          "Error while processing SQL_UPDATE_PlatformSourceProperty" + e.getMessage());
+    }
+
   }
 
 }

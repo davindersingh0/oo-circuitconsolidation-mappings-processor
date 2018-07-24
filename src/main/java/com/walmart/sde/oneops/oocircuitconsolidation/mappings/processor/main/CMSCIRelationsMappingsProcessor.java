@@ -564,7 +564,6 @@ public class CMSCIRelationsMappingsProcessor {
     String comments = IConstants.CIRCUIT_CONSOLIDATION_COMMENTS;
 
 
-
     log.info(
         "creating CMSCIRelation attribute attributeName: {} attributeId {} for targetCMSCIRelationName {} targetCMSCIRelationId {}, "
             + "targetFromCMSCIClazzName {}, targetFromCMSCIClazzId {}, targetToCMSCIClazzName{} targetToCMSCIClazzId {} with dfValue {} , djValue {}",
@@ -582,6 +581,7 @@ public class CMSCIRelationsMappingsProcessor {
     for (int ci_relation_id : ci_relation_ids) {
       log.info("Adding CMSCIRelation attributes for ci_relation_id <{}>", ci_relation_id);
       int ci_rel_attribute_id = dal.getNext_cm_pk_seqId();
+      
       dal.createCMSCIRelationAttribute(ci_rel_attribute_id, ci_relation_id, attributeId, dfValue,
           djValue, owner, comments);
     }
