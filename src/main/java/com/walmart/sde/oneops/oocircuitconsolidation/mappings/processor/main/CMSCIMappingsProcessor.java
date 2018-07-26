@@ -73,19 +73,6 @@ public class CMSCIMappingsProcessor {
     this.nsForPlatformCiComponents = nsForPlatformCiComponents;
   }
 
-  /*
-   * (CMCI,UPDATE_CMCI_CLAZZID_CLAZZNAME_GOID) (CMCI_ATTRIBUTE,DELETE_SOURCE_ATTRIBUTE_ID)
-   * (CMCI_ATTRIBUTE,SET_DEFAULT_ATTRIBUTE_VALUE) (CMCI_ATTRIBUTE,UPDATE_SOURCE_ATTRIBUTE_ID)
-   * 
-   * 
-   * NEW Scenarios: (SWITCH_CMCI_CLAZZID_CLAZZNAME_GOID,CMSCI) - covered (DELETE_CMSCI,CMSCI)
-   * (CREATE_CMSCI,CMSCI)
-   * 
-   * (DELETE_CMSCI_ATTRIBUTE,CMSCI_ATTRIBUTE) - covered
-   * (SET_DEFAULT_CMSCI_ATTRIBUTE_VALUE,CMSCI_ATTRIBUTE) - covered
-   * (SWITCH_CMSCI_ATTRIBUTE_ID,CMSCI_ATTRIBUTE)- covered
-   * 
-   */
   public void processCMSCIMappings(List<CmsCiAndCmsCiAttributesActionMappingsModel> mappingsList) {
     Gson gson = new Gson();
 
