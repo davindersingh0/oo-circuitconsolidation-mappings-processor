@@ -8,7 +8,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.google.gson.Gson;
 import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.config.IConstants;
-import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.config.SqlQueries;
 import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.dal.KloopzCmDal;
 import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.exception.UnSupportedTransformationMappingException;
 import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.model.CmsCiAndCmsCiAttributesActionMappingsModel;
@@ -90,10 +89,10 @@ public class CMSCIMappingsProcessor {
   public void processCMSCIMappings(List<CmsCiAndCmsCiAttributesActionMappingsModel> mappingsList) {
     Gson gson = new Gson();
 
-    //update source property of platform from walmartLabs to oneops
+    // update source property of platform from walmartLabs to oneops
     dal.updatePlatformSourceProperty(ns, platformName);
-    
-    
+
+
     for (CmsCiAndCmsCiAttributesActionMappingsModel mapping : mappingsList) {
 
       String entityType = mapping.getEntityType();
@@ -132,6 +131,10 @@ public class CMSCIMappingsProcessor {
 
           case "SET_DEFAULT_CMSCI_ATTRIBUTE_VALUE":
             processMapping_SET_DEFAULT_ATTRIBUTE_VALUE(mapping);
+            break;
+
+          case "CREATE_CMSCI_ATTRIBUTE_WITH_SOURCE_CLAZZ_ATTRIBUTE_VALUE":
+            processMapping_CREATE_CMSCI_ATTRIBUTE_WITH_SOURCE_CLAZZ_ATTRIBUTE_VALUE(mapping);
             break;
 
           case "SWITCH_CMSCI_ATTRIBUTE_ID":
@@ -252,13 +255,28 @@ public class CMSCIMappingsProcessor {
     String targetClassName = mapping.getTargetClassname();
     int targetclassId = mapping.getTargetClassId();
 
-    String sql = SqlQueries.SQL_SELECT_CMSCIATTRIBUTE;
+    String SQL_SELECT_CMSCIATTRIBUTE =    "select "+
+        "ca.ci_attribute_id, "+
+        "ca.attribute_id, "+
+        "ca.ci_id, "+
+        "cla.attribute_name, "+
+        "ci.ci_name, "+
+        "ns.ns_path, "+
+        "cla.attribute_id "+
+        "from cm_ci_attributes ca, md_class_attributes cla, cm_ci ci, ns_namespaces ns "+
+        "where "+
+        "ca.ci_id=ci.ci_id "+
+        "and ci.ns_id = ns.ns_id "+
+        "and ca.attribute_id=cla.attribute_id "+
+        "and ns.ns_path =? "+
+        "and ci.class_id=? "+
+        "and ca.attribute_id=?; ";
 
     try {
       // String selectSQL = SqlQueries.SQL_SELECT_NakedCMSCIByNsAndClazz;
 
-      log.info("SQL_SELECT_CMSCIATTRIBUTE        : " + sql);
-      PreparedStatement preparedStatement = conn.prepareStatement(sql);
+      log.info("SQL_SELECT_CMSCIATTRIBUTE        : " + SQL_SELECT_CMSCIATTRIBUTE);
+      PreparedStatement preparedStatement = conn.prepareStatement(SQL_SELECT_CMSCIATTRIBUTE);
 
       preparedStatement.setString(1, this.nsForPlatformCiComponents);
       preparedStatement.setInt(2, sourceclassId);
@@ -295,6 +313,60 @@ public class CMSCIMappingsProcessor {
   }
 
 
+  private void processMapping_CREATE_CMSCI_ATTRIBUTE_WITH_SOURCE_CLAZZ_ATTRIBUTE_VALUE(
+      CmsCiAndCmsCiAttributesActionMappingsModel mapping) {
+    // from mappings
+
+
+    String sourceClassName = mapping.getSourceClassname();
+    int sourceClassId = mapping.getSourceClassId();
+    String sourceClazzAttributeName = mapping.getSourceAttributeName();
+    int sourceClazzAttributeId = mapping.getSourceAttributeId();
+
+
+    String targetClassName = mapping.getTargetClassname();
+    int targetClassId = mapping.getTargetClassId();
+    String targetClazzAttributeName = mapping.getTargetAttributeName();
+    int targetClazzAttributeId = mapping.getTargetAttributeId();
+
+
+
+    List<Integer> sourceClazzCiIds =
+        dal.getCiIdsForNsAndClazz(this.nsForPlatformCiComponents, sourceClassName);
+    log.info("sourceClazzCiIds: " + sourceClazzCiIds.toString());
+
+    List<Integer> targetClazzCiIds =
+        dal.getCiIdsForNsAndClazz(this.nsForPlatformCiComponents, sourceClassName);
+    log.info("targetClazzCiIds: " + targetClazzCiIds.toString());
+
+    if (sourceClazzCiIds.size() != 1 || targetClazzCiIds.size() != 1) {
+
+      throw new UnsupportedOperationException("sourceClazzCiIds: " + sourceClazzCiIds
+          + " targetClazzCiIds: " + targetClazzCiIds + " one of the ciIds != 1");
+    }
+
+    String cmsCiAttributeValue = dal.getCMSCIAttributeValueByAttribNameAndCiId(
+        sourceClazzCiIds.get(0), sourceClazzAttributeId, sourceClazzAttributeName);
+
+    int ciId = targetClazzCiIds.get(0);
+    int ci_attribute_id = dal.getNext_cm_pk_seqId();
+
+
+    log.info(
+        "copying cmsCiAttribute sourceClazzAttributeName {} from sourceClassName {} & sourceClassId {} To targetClassName {} & targetClassId {}",
+        sourceClazzAttributeName, sourceClassName, sourceClassId, targetClassName, targetClassId);
+
+    log.info("sourceClazzAttributeName{} sourceClazzAttributeId {}", sourceClazzAttributeName,
+        sourceClazzAttributeId);
+    log.info("targetClazzAttributeName{} targetClazzAttributeId {}", targetClazzAttributeName,
+        targetClazzAttributeId);
+
+    dal.createNewCMSCIAttribute(ci_attribute_id, ciId, targetClazzAttributeId, cmsCiAttributeValue,
+        IConstants.CIRCUIT_CONSOLIDATION_USER, IConstants.CIRCUIT_CONSOLIDATION_COMMENTS);
+
+  }
+
+
   private void processMapping_SET_DEFAULT_ATTRIBUTE_VALUE(
       CmsCiAndCmsCiAttributesActionMappingsModel mapping) {
     // from mappings
@@ -311,8 +383,8 @@ public class CMSCIMappingsProcessor {
         "Adding CMSCI Attribute for CiIds {}, targetClassName <{}> targetClassId <{}> , targetAttributeName <{}> targetAttributeId <{}> with default value <{}>",
         ciIds.toString(), targetClassName, targetClassId, targetAttributeName, targetAttributeId,
         targetDefaultValue);
-    
-    
+
+
     for (int ciId : ciIds) {
       log.info(
           "Adding CMSCI Attribute for CiId {}, targetClassName <{}> targetClassId <{}> , targetAttributeName <{}> targetAttributeId <{}> with default value <{}>",
@@ -320,13 +392,12 @@ public class CMSCIMappingsProcessor {
           targetDefaultValue);
       int ci_attribute_id = dal.getNext_cm_pk_seqId();
 
-      dal.createNewCMSCIAttributeWithDefaultValue(ci_attribute_id, ciId, targetAttributeId,
-          targetDefaultValue, IConstants.CIRCUIT_CONSOLIDATION_USER,
-          IConstants.CIRCUIT_CONSOLIDATION_COMMENTS);
+      dal.createNewCMSCIAttribute(ci_attribute_id, ciId, targetAttributeId, targetDefaultValue,
+          IConstants.CIRCUIT_CONSOLIDATION_USER, IConstants.CIRCUIT_CONSOLIDATION_COMMENTS);
 
     }
 
-   
+
 
   }
 
@@ -401,8 +472,6 @@ public class CMSCIMappingsProcessor {
           log.info(resultSet.getMetaData().getColumnLabel(i) + " : " + resultSet.getObject(i));
 
         }
-
-
 
       }
       log.info("preparedStatement: " + preparedStatement);
@@ -500,6 +569,6 @@ public class CMSCIMappingsProcessor {
 
   }
 
-  
+
 
 }

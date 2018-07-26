@@ -8,7 +8,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.config.IConstants;
-import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.config.SqlQueries;
+import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.exception.UnSupportedOperation;
 
 public class KloopzCmDal {
 
@@ -37,10 +37,19 @@ public class KloopzCmDal {
     List<Integer> ciIds = new ArrayList<Integer>();
     try {
 
-      log.info("SQL_SELECT_NakedCMSCIByNsAndClazz        : "
-          + SqlQueries.SQL_SELECT_NakedCMSCIByNsAndClazz);
+      String SQL_SELECT_NakedCMSCIByNsAndClazz = "select " + "ci.ci_id as ciId, "
+          + "ci.ci_name as ciName," + "ci.class_id as ciClassId," + "cl.class_name as ciClassName,"
+          + "cl.impl as impl, " + "ci.ns_id as nsId, " + "ns.ns_path as nsPath, "
+          + "ci.ci_goid as ciGoid, " + "ci.comments, " + "ci.ci_state_id as ciStateId, "
+          + "st.state_name as ciState, " + "ci.last_applied_rfc_id as lastAppliedRfcId, "
+          + "ci.created_by as createdBy, " + "ci.updated_by as updatedBy, " + "ci.created, "
+          + "ci.updated " + "from cm_ci ci, md_classes cl, ns_namespaces ns, cm_ci_state st "
+          + "where ns.ns_path = ? " + "and cl.class_name = ? " + "and ci.class_id = cl.class_id "
+          + "and ci.ns_id = ns.ns_id " + "and ci.ci_state_id = st.ci_state_id;";
+
+      log.info("SQL_SELECT_NakedCMSCIByNsAndClazz : " + SQL_SELECT_NakedCMSCIByNsAndClazz);
       PreparedStatement preparedStatement_SELECT_NakedCMSCIByNsAndClazz =
-          conn.prepareStatement(SqlQueries.SQL_SELECT_NakedCMSCIByNsAndClazz);
+          conn.prepareStatement(SQL_SELECT_NakedCMSCIByNsAndClazz);
       preparedStatement_SELECT_NakedCMSCIByNsAndClazz.setString(1, ns);
       preparedStatement_SELECT_NakedCMSCIByNsAndClazz.setString(2, clazz);
 
@@ -57,7 +66,7 @@ public class KloopzCmDal {
 
       log.info("numberOfRecords: " + numberOfRecords);
     } catch (Exception e) {
-      throw new RuntimeException("Error while fetching records" + e.getMessage());
+      throw new UnSupportedOperation("Error while fetching records" + e.getMessage());
     }
     return ciIds;
   }
@@ -85,7 +94,7 @@ public class KloopzCmDal {
 
 
     } catch (Exception e) {
-      throw new RuntimeException("Error while fetching records" + e.getMessage());
+      throw new UnSupportedOperation("Error while fetching records" + e.getMessage());
     }
     return ciIds;
   }
@@ -134,7 +143,7 @@ public class KloopzCmDal {
           NumberOfCmsCiRelationsDeleted, nsForPlatformCiComponents, fromClazz, toClazz,
           relationName);
     } catch (Exception e) {
-      throw new RuntimeException("Error while fetching records" + e.getMessage());
+      throw new UnSupportedOperation("Error while fetching records" + e.getMessage());
     }
 
   }
@@ -163,11 +172,11 @@ public class KloopzCmDal {
       log.info("numberOfRecords {} for nsForPlatformCiComponents {} : nsIds {}", numberOfRecords,
           nsForPlatformCiComponents, nsIds.toString());
       if (numberOfRecords == 0 || numberOfRecords > 1) {
-        throw new RuntimeException("numberOfRecords " + numberOfRecords
+        throw new UnSupportedOperation("numberOfRecords " + numberOfRecords
             + " invalid for nsForPlatformCiComponents :" + nsForPlatformCiComponents);
       }
     } catch (Exception e) {
-      throw new RuntimeException("Error while fetching records" + e.getMessage());
+      throw new UnSupportedOperation("Error while fetching records" + e.getMessage());
     }
 
 
@@ -208,7 +217,7 @@ public class KloopzCmDal {
 
 
     } catch (Exception e) {
-      throw new RuntimeException("Error while fetching records" + e.getMessage());
+      throw new UnSupportedOperation("Error while fetching records" + e.getMessage());
     }
 
   }
@@ -243,7 +252,7 @@ public class KloopzCmDal {
           numberOfUpdatedRecords);
 
     } catch (Exception e) {
-      throw new RuntimeException("Error while fetching records" + e.getMessage());
+      throw new UnSupportedOperation("Error while fetching records" + e.getMessage());
     }
 
   }
@@ -282,7 +291,7 @@ public class KloopzCmDal {
       log.info("Number of CMSCI attributes deleted: {}", numberOfRecords);
 
     } catch (Exception e) {
-      throw new RuntimeException("Error while fetching records" + e.getMessage());
+      throw new UnSupportedOperation("Error while fetching records" + e.getMessage());
     }
 
 
@@ -308,9 +317,9 @@ public class KloopzCmDal {
 
       }
     } catch (Exception e) {
-      throw new RuntimeException("Error while fetching records" + e.getMessage());
+      throw new UnSupportedOperation("Error while fetching records" + e.getMessage());
     }
-    throw new RuntimeException("Unable to retrive next CiId");
+    throw new UnSupportedOperation("Unable to retrive next CiId");
 
   }
 
@@ -363,13 +372,13 @@ public class KloopzCmDal {
 
 
     } catch (Exception e) {
-      throw new RuntimeException("Error while creating new CMSCI " + e.getMessage());
+      throw new UnSupportedOperation("Error while creating new CMSCI " + e.getMessage());
     }
 
   }
 
-  public void createNewCMSCIAttributeWithDefaultValue(int ci_attribute_id, int ci_id,
-      int attribute_id, String targetDefaultValue, String owner, String comments) {
+  public void createNewCMSCIAttribute(int ci_attribute_id, int ci_id, int attribute_id,
+      String targetDefaultValue, String owner, String comments) {
 
 
     // TODO Auto-generated method stub
@@ -412,7 +421,7 @@ public class KloopzCmDal {
       log.info("preparedStatement: " + preparedStatement);
 
     } catch (Exception e) {
-      throw new RuntimeException("Error while creating new CMSCI " + e.getMessage());
+      throw new UnSupportedOperation("Error while creating new CMSCI " + e.getMessage());
     }
 
   }
@@ -467,7 +476,7 @@ public class KloopzCmDal {
 
 
     } catch (Exception e) {
-      throw new RuntimeException("Error while creating new CMSCIRelation " + e.getMessage());
+      throw new UnSupportedOperation("Error while creating new CMSCIRelation " + e.getMessage());
     }
 
 
@@ -522,7 +531,7 @@ public class KloopzCmDal {
 
       log.info("numberOfRecords for SQL_INSERT_CreateNewCMSIRelationAttribute {}", numberOfRecords);
     } catch (Exception e) {
-      throw new RuntimeException("Error while creating new CMSCIRelation " + e.getMessage());
+      throw new UnSupportedOperation("Error while creating new CMSCIRelation " + e.getMessage());
     }
 
 
@@ -573,7 +582,7 @@ public class KloopzCmDal {
 
 
     } catch (Exception e) {
-      throw new RuntimeException("Error while fetching records" + e.getMessage());
+      throw new UnSupportedOperation("Error while fetching records" + e.getMessage());
     }
 
 
@@ -589,12 +598,10 @@ public class KloopzCmDal {
           + " where ci_attribute_id="
           + " (SELECT ca.ci_attribute_id from cm_ci_attributes ca, md_class_attributes cla, cm_ci ci, ns_namespaces ns "
           + " where ca.ci_id=ci.ci_id and ci.ns_id = ns.ns_id "
-          + " and ca.attribute_id=cla.attribute_id "
-          + " and cla.attribute_name='source' "
-          + " and ns.ns_path =? "
-          + " and ci.ci_name=?); ";
+          + " and ca.attribute_id=cla.attribute_id " + " and cla.attribute_name='source' "
+          + " and ns.ns_path =? " + " and ci.ci_name=?); ";
 
-      
+
       log.info("SQL_UPDATE_PlatformSourceProperty: " + SQL_UPDATE_PlatformSourceProperty);
 
       PreparedStatement preparedStatement =
@@ -607,7 +614,7 @@ public class KloopzCmDal {
       log.info("preparedStatement: " + preparedStatement);
       int numberOfRecords = preparedStatement.executeUpdate();
       if (numberOfRecords != 1) {
-        throw new RuntimeException(
+        throw new UnSupportedOperation(
             "updatePlatformSourceProperty function should update 1 record however numberOfRecords= :"
                 + numberOfRecords);
       }
@@ -615,9 +622,66 @@ public class KloopzCmDal {
           platformName);
 
     } catch (Exception e) {
-      throw new RuntimeException(
+      throw new UnSupportedOperation(
           "Error while processing SQL_UPDATE_PlatformSourceProperty" + e.getMessage());
     }
+
+  }
+
+  public String getCMSCIAttributeValueByAttribNameAndCiId(int ciId, int attributeId,
+      String attributeName) {
+
+    String SQL_SELECT_CMSCIATTRIBUTE_ValueByAttribNameAndCiId =
+        "SELECT ca.df_attribute_value, ca.dj_attribute_value  "
+            + "from cm_ci_attributes ca, md_class_attributes cla, cm_ci ci "
+            + " where ca.ci_id=ci.ci_id " + " and ca.attribute_id=cla.attribute_id "
+            + " and ci.ci_id=?" + " and ca.attribute_id=?" + " and cla.attribute_name=? ";
+
+
+    try {
+
+      log.info("SQL_SELECT_CMSCIATTRIBUTE_ValueByAttribNameAndCiId : "
+          + SQL_SELECT_CMSCIATTRIBUTE_ValueByAttribNameAndCiId);
+      PreparedStatement preparedStatement =
+          conn.prepareStatement(SQL_SELECT_CMSCIATTRIBUTE_ValueByAttribNameAndCiId);
+
+      preparedStatement.setInt(1, ciId);
+      preparedStatement.setInt(2, attributeId);
+      preparedStatement.setString(3, attributeName);
+
+      log.info("preparedStatement: " + preparedStatement);
+      ResultSet result = preparedStatement.executeQuery();
+
+      String attributeValue = null;
+
+      int numberOfRecords = 0;
+      while (result.next()) {
+
+        String df_attribute_value = result.getString("df_attribute_value");
+        String dj_attribute_value = result.getString("dj_attribute_value");
+
+        attributeValue = df_attribute_value;
+
+        log.info(
+            "ciId {}, attributeId {}, attributeName {}, df_attribute_value {} , dj_attribute_value {}"
+                + ciId,
+            attributeId, attributeName, df_attribute_value, dj_attribute_value);
+        numberOfRecords++;
+
+      }
+      log.info("Number of CMSCI attribute values : {}", numberOfRecords);
+
+      if (numberOfRecords > 1) {
+        throw new UnSupportedOperation("numberOfRecords for ciId: " + ciId + ", attributeName: "
+            + attributeName + " and attributeId" + attributeId + "not supported");
+      }
+
+      return attributeValue;
+
+    } catch (Exception e) {
+      throw new UnSupportedOperation("Error while fetching records" + e.getMessage());
+    }
+
 
   }
 
