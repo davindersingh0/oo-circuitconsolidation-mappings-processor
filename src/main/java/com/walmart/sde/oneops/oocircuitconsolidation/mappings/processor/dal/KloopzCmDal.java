@@ -400,14 +400,12 @@ public class KloopzCmDal {
 
     try {
 
-      String SQL_INSERT_AddNewCMSCIAttributeWithDefaultValue =
+      String SQL_INSERT_AddNewCMSCIAttribute =
           "INSERT INTO cm_ci_attributes (ci_attribute_id, ci_id, attribute_id, df_attribute_value, dj_attribute_value, owner, comments) "
               + "VALUES (?, ?, ?, ?, ?, ?, ?);";
 
-      log.info("SQL_INSERT_AddNewCMSCIAttributeWithDefaultValue: "
-          + SQL_INSERT_AddNewCMSCIAttributeWithDefaultValue);
-      PreparedStatement preparedStatement =
-          conn.prepareStatement(SQL_INSERT_AddNewCMSCIAttributeWithDefaultValue);
+      log.info("SQL_INSERT_AddNewCMSCIAttribute: " + SQL_INSERT_AddNewCMSCIAttribute);
+      PreparedStatement preparedStatement = conn.prepareStatement(SQL_INSERT_AddNewCMSCIAttribute);
 
       preparedStatement.setInt(1, ci_attribute_id);
       preparedStatement.setInt(2, ci_id);
@@ -416,9 +414,10 @@ public class KloopzCmDal {
       preparedStatement.setString(5, targetDefaultValue);
       preparedStatement.setString(6, owner);
       preparedStatement.setString(7, comments);
-
-
       log.info("preparedStatement: " + preparedStatement);
+
+      int numberOfRecords = preparedStatement.executeUpdate();
+      log.info("numberOfRecords for SQL_INSERT_AddNewCMSCIAttribute {}", numberOfRecords);
 
     } catch (Exception e) {
       throw new UnSupportedOperation("Error while creating new CMSCI " + e.getMessage());
@@ -682,6 +681,48 @@ public class KloopzCmDal {
       throw new UnSupportedOperation("Error while fetching records" + e.getMessage());
     }
 
+
+  }
+
+  public List<Integer> getCiIdsForNsClazzAndPlatformCiName(String ns, String clazz,
+      String platformName) {
+
+    List<Integer> ciIds = new ArrayList<Integer>();
+    try {
+
+      String SQL_SELECT_PlatformCiIdsbyNsClazzAndPlatformName = "select " + "ci.ci_id as ciId, "
+          + "ci.ci_name as ciName," + "ci.class_id as ciClassId," + "cl.class_name as ciClassName,"
+          + "cl.impl as impl, " + "ci.ns_id as nsId, " + "ns.ns_path as nsPath, "
+          + "ci.ci_goid as ciGoid, " + "ci.comments, " + "ci.ci_state_id as ciStateId, "
+          + "st.state_name as ciState, " + "ci.last_applied_rfc_id as lastAppliedRfcId, "
+          + "ci.created_by as createdBy, " + "ci.updated_by as updatedBy, " + "ci.created, "
+          + "ci.updated " + "from cm_ci ci, md_classes cl, ns_namespaces ns, cm_ci_state st "
+          + "where ns.ns_path = ? " + "and cl.class_name = ? " + "and ci.class_id = cl.class_id "
+          + "and ci.ns_id = ns.ns_id " + "and ci.ci_state_id = st.ci_state_id and ci.ci_name=?;";
+
+      log.info("SQL_SELECT_PlatformCiIdsbyNsClazzAndPlatformName : "
+          + SQL_SELECT_PlatformCiIdsbyNsClazzAndPlatformName);
+      PreparedStatement preparedStatement =
+          conn.prepareStatement(SQL_SELECT_PlatformCiIdsbyNsClazzAndPlatformName);
+      preparedStatement.setString(1, ns);
+      preparedStatement.setString(2, clazz);
+      preparedStatement.setString(3, platformName);
+
+      log.info("preparedStatement: " + preparedStatement);
+      ResultSet resultSet = preparedStatement.executeQuery();
+
+      int numberOfRecords = 0;
+      while (resultSet.next()) {
+        ciIds.add(resultSet.getInt("ciId"));
+        numberOfRecords++;
+
+      }
+
+      log.info("numberOfRecords: " + numberOfRecords);
+    } catch (Exception e) {
+      throw new UnSupportedOperation("Error while fetching records" + e.getMessage());
+    }
+    return ciIds;
 
   }
 

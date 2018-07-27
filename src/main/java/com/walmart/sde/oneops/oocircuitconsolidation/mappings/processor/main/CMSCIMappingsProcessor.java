@@ -1,8 +1,6 @@
 package com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.main;
 
 import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -77,7 +75,11 @@ public class CMSCIMappingsProcessor {
     Gson gson = new Gson();
 
     // update source property of platform from walmartLabs to oneops
-    dal.updatePlatformSourceProperty(ns, platformName);
+    if (ooPhase.equals(IConstants.DESIGN_PHASE)) {
+      dal.updatePlatformSourceProperty(this.ns, platformName);
+    } else {
+      dal.updatePlatformSourceProperty(this.nsForPlatformCiComponents, platformName);
+    }
 
 
     for (CmsCiAndCmsCiAttributesActionMappingsModel mapping : mappingsList) {
@@ -228,78 +230,6 @@ public class CMSCIMappingsProcessor {
 
   }
 
-  @Deprecated
-  private void process_DELETE_SOURCE_ATTRIBUTE_IDV2(
-      CmsCiAndCmsCiAttributesActionMappingsModel mapping) {
-
-
-    // from mappings
-    String sourceClassName = mapping.getSourceClassname();
-    int sourceclassId = mapping.getSourceClassId();
-    String sourceAttributeName = mapping.getSourceAttributeName();
-    int sourceAttributeId = mapping.getSourceAttributeId();
-
-    String targetClassName = mapping.getTargetClassname();
-    int targetclassId = mapping.getTargetClassId();
-
-    String SQL_SELECT_CMSCIATTRIBUTE =    "select "+
-        "ca.ci_attribute_id, "+
-        "ca.attribute_id, "+
-        "ca.ci_id, "+
-        "cla.attribute_name, "+
-        "ci.ci_name, "+
-        "ns.ns_path, "+
-        "cla.attribute_id "+
-        "from cm_ci_attributes ca, md_class_attributes cla, cm_ci ci, ns_namespaces ns "+
-        "where "+
-        "ca.ci_id=ci.ci_id "+
-        "and ci.ns_id = ns.ns_id "+
-        "and ca.attribute_id=cla.attribute_id "+
-        "and ns.ns_path =? "+
-        "and ci.class_id=? "+
-        "and ca.attribute_id=?; ";
-
-    try {
-      // String selectSQL = SqlQueries.SQL_SELECT_NakedCMSCIByNsAndClazz;
-
-      log.info("SQL_SELECT_CMSCIATTRIBUTE        : " + SQL_SELECT_CMSCIATTRIBUTE);
-      PreparedStatement preparedStatement = conn.prepareStatement(SQL_SELECT_CMSCIATTRIBUTE);
-
-      preparedStatement.setString(1, this.nsForPlatformCiComponents);
-      preparedStatement.setInt(2, sourceclassId);
-      preparedStatement.setInt(3, sourceAttributeId);
-
-
-      // preparedStatement.setString(1, this.nsForPlatformCiComponents);
-
-      log.info("preparedStatement: " + preparedStatement);
-      ResultSet resultSet = preparedStatement.executeQuery();
-
-      int numberOfRecords = 0;
-
-      int numberOfColumns = resultSet.getMetaData().getColumnCount();
-      while (resultSet.next()) {
-        numberOfRecords++;
-        for (int i = 1; i <= numberOfColumns; i++) {
-          log.info(resultSet.getMetaData().getColumnLabel(i) + " : " + resultSet.getObject(i));
-
-        }
-
-
-
-      }
-      log.info(" SQL_SELECT_CMSCIATTRIBUTE: numberOfRecords: " + numberOfRecords);
-
-    } catch (Exception e) {
-      throw new RuntimeException("Error while fetching records" + e.getMessage());
-    }
-
-
-    // operation: deleteCIAttribute
-
-  }
-
-
   private void processMapping_CREATE_CMSCI_ATTRIBUTE_WITH_SOURCE_CLAZZ_ATTRIBUTE_VALUE(
       CmsCiAndCmsCiAttributesActionMappingsModel mapping) {
     // from mappings
@@ -323,7 +253,7 @@ public class CMSCIMappingsProcessor {
     log.info("sourceClazzCiIds: " + sourceClazzCiIds.toString());
 
     List<Integer> targetClazzCiIds =
-        dal.getCiIdsForNsAndClazz(this.nsForPlatformCiComponents, sourceClassName);
+        dal.getCiIdsForNsAndClazz(this.nsForPlatformCiComponents, targetClassName);
     log.info("targetClazzCiIds: " + targetClazzCiIds.toString());
 
     if (sourceClazzCiIds.size() != 1 || targetClazzCiIds.size() != 1) {
@@ -388,93 +318,6 @@ public class CMSCIMappingsProcessor {
 
   }
 
-  @Deprecated
-  private void processMapping_SET_DEFAULT_ATTRIBUTE_VALUE_V2(
-      CmsCiAndCmsCiAttributesActionMappingsModel mapping) {
-    // from mappings
-    String targetClassName = mapping.getTargetClassname();
-    int targetClassId = mapping.getTargetClassId();
-    String targetAttributeName = mapping.getTargetAttributeName();
-    int targetAttributeId = mapping.getTargetAttributeId();
-    String targetDefaultValue = mapping.getTargetDefaultValue();
-
-
-    // sourceAttributeId
-    // select * from CM_CI_Attributes where attribute_id=? and ci_id in (select * from cm_ci where
-    // ns_id= ? and class_id=?);
-
-    // select * from CM_CI_Attributes where attribute_id=? and ci_id in (select * from cm_ci where
-    // ns_id= ? and class_id=?);
-    // cm_ci ci , and ci.class_id = cl.class_id
-    // and ci.ns_id = ns.ns_id
-    // and ci.ci_state_id = st.ci_state_id
-    // from cm_ci ci, md_classes cl, ns_namespaces ns, cm_ci_state st
-    /*
-     * where ns.ns_path = #{ns} and (#{clazz}::varchar is null or cl.class_name = #{clazz}) and
-     * (#{shortClazz}::varchar is null or cl.short_class_name = #{shortClazz}) and (#{name}::varchar
-     * is null or lower(ci.ci_name) = lower(#{name})) and ci.class_id = cl.class_id and ci.ns_id =
-     * ns.ns_id and ci.ci_state_id = st.ci_state_id
-     */
-
-    // operations: create Add New attribute for CMSCI with default value , set for both DJ & DF
-    // fields
-
-
-    // getCMSCI for specific class and add the attribute, if multiple classes then add to all of
-    // them
-
-    String sourceClassName = mapping.getSourceClassname();
-    int sourceClassId = mapping.getSourceClassId();
-    int sourceAttributeId = mapping.getSourceAttributeId();
-
-    String sql = "select " + "ca.ci_attribute_id, " + "ca.attribute_id, " + "ca.ci_id, "
-        + "cla.attribute_name, " + "ci.ci_name, " + "ns.ns_path "
-        + "from cm_ci_attributes ca, md_class_attributes cla, cm_ci ci, ns_namespaces ns "
-        + "where " + "ca.ci_id=ci.ci_id " + "and ci.ns_id = ns.ns_id "
-        + "and ca.attribute_id=cla.attribute_id " + "and ns.ns_path =? " + "and ci.class_id=? ;";
-
-
-    try {
-      // String selectSQL = SqlQueries.SQL_SELECT_NakedCMSCIByNsAndClazz;
-
-      log.info("processMapping_SET_DEFAULT_ATTRIBUTE_VALUE       : " + sql);
-      PreparedStatement preparedStatement = conn.prepareStatement(sql);
-
-      preparedStatement.setString(1, this.nsForPlatformCiComponents);
-      preparedStatement.setInt(2, sourceClassId);
-
-
-
-      // preparedStatement.setString(1, this.nsForPlatformCiComponents);
-
-      log.info("preparedStatement: " + preparedStatement);
-      ResultSet resultSet = preparedStatement.executeQuery();
-
-      int numberOfRecords = 0;
-
-      int numberOfColumns = resultSet.getMetaData().getColumnCount();
-      while (resultSet.next()) {
-        numberOfRecords++;
-        for (int i = 1; i <= numberOfColumns; i++) {
-          log.info(resultSet.getMetaData().getColumnLabel(i) + " : " + resultSet.getObject(i));
-
-        }
-
-      }
-      log.info("preparedStatement: " + preparedStatement);
-      log.info(" processMapping_SET_DEFAULT_ATTRIBUTE_VALUE: numberOfRecords: " + numberOfRecords);
-
-    } catch (Exception e) {
-      throw new RuntimeException("Error while fetching records" + e.getMessage());
-    }
-
-
-    // TODO: WIP
-
-
-  }
-
-
   private void process_SWITCH_CMSCI_ATTRIBUTE_ID(
       CmsCiAndCmsCiAttributesActionMappingsModel mapping) {
 
@@ -485,74 +328,6 @@ public class CMSCIMappingsProcessor {
 
     dal.switchCMSCIAttribuetId(this.nsForPlatformCiComponents, targetClassId, targetAttributeId,
         sourceAttributeId);
-
-  }
-
-
-  @Deprecated
-  private void process_SWITCH_CMSCI_ATTRIBUTE_IDV2(
-      CmsCiAndCmsCiAttributesActionMappingsModel mapping) {
-
-    // from mappings
-
-
-    String sourceClassName = mapping.getSourceClassname();
-    int sourceClassId = mapping.getSourceClassId();
-    int sourceAttributeId = mapping.getSourceAttributeId();
-
-
-    String targetClassName = mapping.getTargetClassname();
-    int targetClassId = mapping.getTargetClassId();
-    String targetAttributeName = mapping.getTargetClassname();
-    int targetAttributeId = mapping.getTargetAttributeId();
-
-    // TODO: here "and ci.class_id=? "+ needs to be updated to targetClassID instead of
-    // sourceClassId, because we are updating classID before updating attributeIds
-
-
-    String sql = "select " + "ca.ci_attribute_id, " + "ca.attribute_id, " + "ca.ci_id, "
-        + "cla.attribute_name, " + "ci.ci_name, " + "ns.ns_path "
-        + "from cm_ci_attributes ca, md_class_attributes cla, cm_ci ci, ns_namespaces ns "
-        + "where " + "ca.ci_id=ci.ci_id " + "and ci.ns_id = ns.ns_id "
-        + "and ca.attribute_id=cla.attribute_id " + "and ns.ns_path =? " + "and ci.class_id=? "
-        + "and ca.attribute_id=?; ";
-
-
-    try {
-      // String selectSQL = SqlQueries.SQL_SELECT_NakedCMSCIByNsAndClazz;
-
-      log.info("SQL_SELECT_CMSCIATTRIBUTE        : " + sql);
-      PreparedStatement preparedStatement = conn.prepareStatement(sql);
-
-      preparedStatement.setString(1, this.nsForPlatformCiComponents);
-      preparedStatement.setInt(2, targetClassId);
-      preparedStatement.setInt(3, sourceAttributeId);
-
-
-      // preparedStatement.setString(1, this.nsForPlatformCiComponents);
-
-      log.info("preparedStatement: " + preparedStatement);
-      ResultSet resultSet = preparedStatement.executeQuery();
-
-      int numberOfRecords = 0;
-
-      int numberOfColumns = resultSet.getMetaData().getColumnCount();
-      while (resultSet.next()) {
-        numberOfRecords++;
-        for (int i = 1; i <= numberOfColumns; i++) {
-          log.info(resultSet.getMetaData().getColumnLabel(i) + " : " + resultSet.getObject(i));
-
-        }
-
-      }
-      log.info(" process_UPDATE_SOURCE_ATTRIBUTE_ID: numberOfRecords: " + numberOfRecords);
-      System.exit(0);
-
-    } catch (Exception e) {
-      throw new RuntimeException("Error while fetching records" + e.getMessage());
-    }
-
-
 
   }
 

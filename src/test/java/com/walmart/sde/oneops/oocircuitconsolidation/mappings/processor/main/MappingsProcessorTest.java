@@ -42,10 +42,25 @@ public class MappingsProcessorTest {
   @Test(enabled = true)
   private void testMappingsConfigFile() throws SQLException {
     
+    /* Begin: These settings were used for development purpose
     String ns="/TestOrg2/guineapigs1";
     String platformName="guineapig-brown";
     String ooPhase=IConstants.DESIGN_PHASE;
     String envName=null; // null for design phase
+    End: These settings were used for development purpose
+    */
+    /* Begin: These settings were used for development purpose
+    String ns="/TestOrg2/guineapigs1";
+    String platformName="guineapig-brown";
+    String ooPhase=IConstants.TRANSITION_PHASE;
+    String envName="dev"; // null for design phase
+    */
+    
+    String ns="/TestOrg3/TestTransformationAssembly5";
+    String platformName="TestCaseT5";
+    String ooPhase=IConstants.TRANSITION_PHASE;
+    String envName="dev"; // null for design phase
+    
     
     MappingsProcessorMain mappingsProcessorMain= new MappingsProcessorMain();
     
@@ -57,10 +72,18 @@ public class MappingsProcessorTest {
     
     Map<String, List> transformationMappings = mappingsCache.createTransformationMappingsCache(conn, ooPhase);
     log.info("transformationMappings: "+gson.toJson(transformationMappings));
-
     
     mappingsProcessorMain.processMappings(transformationMappings, ns, platformName, ooPhase, envName, conn);
-
+    
+    log.info("Transformation implemented, commiting transaction..");
+    log.info("**********************************************************************");
+    conn.commit();
+    log.info("Transformation committed to database");
+    log.info("**********************************************************************");
+    log.info("closing connection: ");
+    conn.close();
+    log.info("closed connection: ");
+    
   }
 
 
