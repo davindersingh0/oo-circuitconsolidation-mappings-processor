@@ -88,7 +88,7 @@ public class CMSCIRelationsMappingsProcessor {
       if (entityType.equalsIgnoreCase("CMSCI_RELATION")) {
         switch (action) {
           case "CREATE_RELATION":
-            process_CREATE_RELATION(mapping);
+           // process_CREATE_RELATION(mapping);
 
             break;
           case "DELETE_RELATION":
@@ -105,7 +105,7 @@ public class CMSCIRelationsMappingsProcessor {
 
         switch (action) {
           case "ADD_RELATION_ATTRIBUTE":
-            process_ADD_RELATION_ATTRIBUTE(mapping);
+           // process_ADD_RELATION_ATTRIBUTE(mapping);
             break;
 
           default:
@@ -200,6 +200,7 @@ public class CMSCIRelationsMappingsProcessor {
     int sourceCmsCiRelationId = mapping.getSourceCmsCiRelationId();
 
 
+    log.info("Begin: process_DELETE_RELATION() **************************************************************************");
     List<Integer> fromCiIds = new ArrayList<Integer>();
 
     if (sourceCmsCiRelationName.contains("base.Requires")) {
@@ -224,7 +225,7 @@ public class CMSCIRelationsMappingsProcessor {
 
     dal.deleteCiRelations(sourceFromCmsCiClazzName, fromCiIds, sourceToCmsCiClazzName, toCiIds,
         sourceCmsCiRelationId, sourceCmsCiRelationName, this.nsForPlatformCiComponents);
-
+    log.info("End: process_DELETE_RELATION() **************************************************************************");
   }
 
   private void process_ADD_RELATION_ATTRIBUTE(

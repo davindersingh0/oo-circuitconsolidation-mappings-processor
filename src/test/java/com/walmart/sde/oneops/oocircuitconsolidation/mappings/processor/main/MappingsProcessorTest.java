@@ -56,9 +56,14 @@ public class MappingsProcessorTest {
     String envName="dev"; // null for design phase
     */
     
-    String ns="/TestOrg3/TestTransformationAssembly5";
-    String platformName="TestCaseT5";
-    String ooPhase=IConstants.TRANSITION_PHASE;
+    /*String ns="/TestOrg2/TestTransformationAssembly6";
+    String platformName="TestCaseT6";
+  
+    
+    */String ns="/TestOrg2/TestTransformtionOperatePhase1";
+    String platformName="TestOpPhase1";
+    
+    String ooPhase=IConstants.OPERATE_PHASE;
     String envName="dev"; // null for design phase
     
     
@@ -77,7 +82,7 @@ public class MappingsProcessorTest {
     
     log.info("Transformation implemented, commiting transaction..");
     log.info("**********************************************************************");
-    conn.commit();
+    //conn.commit();
     log.info("Transformation committed to database");
     log.info("**********************************************************************");
     log.info("closing connection: ");

@@ -77,7 +77,7 @@ public class CMSCIMappingsProcessor {
     // update source property of platform from walmartLabs to oneops
     if (ooPhase.equals(IConstants.DESIGN_PHASE)) {
       dal.updatePlatformSourceProperty(this.ns, platformName);
-    } else {
+    } else if (ooPhase.equals(IConstants.TRANSITION_PHASE)) {
       dal.updatePlatformSourceProperty(this.nsForPlatformCiComponents, platformName);
     }
 
@@ -95,11 +95,11 @@ public class CMSCIMappingsProcessor {
             break;
 
           case "DELETE_CMSCI":
-            process_DELETE_CMSCI(mapping);
+            // process_DELETE_CMSCI(mapping);
             break;
 
           case "CREATE_CMSCI":
-            process_CREATE_CMSCI(mapping);
+            // TODO: process_CREATE_CMSCI(mapping);
             break;
 
 
@@ -184,7 +184,11 @@ public class CMSCIMappingsProcessor {
     // List<Integer> ciIdsToDelete=dal.getCiIdsForNsAndClazz(nsForPlatformCiComponents,
     // mapping.getSourceClassname());
     // log.info("ciIdsToDelete: "+ciIdsToDelete);
+    log.info(
+        "Begin: process_DELETE_CMSCI() **************************************************************************");
     dal.deleteCmsCisForNsAndClazz(nsForPlatformCiComponents, mapping.getSourceClassname());
+    log.info(
+        "End: process_DELETE_CMSCI() **************************************************************************");
     // System.exit(0);
 
 
@@ -203,6 +207,9 @@ public class CMSCIMappingsProcessor {
     List<Integer> ciIds = dal.getCiIdsForNsAndClazz(nsForPlatformCiComponents, sourceClassName);
     int nsId = dal.getNsIdForNsPath(nsForPlatformCiComponents);
 
+    log.info("Begin: process_SWITCH_CMCI_CLAZZID_CLAZZNAME_GOID ()");
+    log.info("**************************************************************************");
+
     for (int ciId : ciIds) {
 
       String goid = nsId + "-" + targetclassId + "-" + ciId;
@@ -210,12 +217,14 @@ public class CMSCIMappingsProcessor {
           targetClassName, targetclassId, goid);
 
     }
-
+    log.info("**************************************************************************");
+    log.info("End: process_SWITCH_CMCI_CLAZZID_CLAZZNAME_GOID ()");
   }
 
   private void process_DELETE_CMSCI_ATTRIBUTE(CmsCiAndCmsCiAttributesActionMappingsModel mapping) {
 
-
+    log.info("**************************************************************************");
+    log.info("Begin: process_DELETE_CMSCI_ATTRIBUTE ()");
     // from mappings
     String sourceClazz = mapping.getSourceClassname();
     int sourceClazzId = mapping.getSourceClassId();
@@ -227,13 +236,17 @@ public class CMSCIMappingsProcessor {
 
     dal.deleteCMSCIAttribute(this.nsForPlatformCiComponents, sourceClazz, sourceClazzId,
         sourceClazzAttributeId, sourceClazzAttributeName, targetClazz, targetClazzId);
-
+    log.info("**************************************************************************");
+    log.info("End: process_DELETE_CMSCI_ATTRIBUTE ()");
   }
 
   private void processMapping_CREATE_CMSCI_ATTRIBUTE_WITH_SOURCE_CLAZZ_ATTRIBUTE_VALUE(
       CmsCiAndCmsCiAttributesActionMappingsModel mapping) {
     // from mappings
 
+    log.info("\n\n");
+    log.info("**************************************************************************");
+    log.info("Begin: processMapping_CREATE_CMSCI_ATTRIBUTE_WITH_SOURCE_CLAZZ_ATTRIBUTE_VALUE ()");
 
     String sourceClassName = mapping.getSourceClassname();
     int sourceClassId = mapping.getSourceClassId();
@@ -281,17 +294,29 @@ public class CMSCIMappingsProcessor {
     dal.createNewCMSCIAttribute(ci_attribute_id, ciId, targetClazzAttributeId, cmsCiAttributeValue,
         IConstants.CIRCUIT_CONSOLIDATION_USER, IConstants.CIRCUIT_CONSOLIDATION_COMMENTS);
 
+    log.info("**************************************************************************");
+    log.info("End: processMapping_CREATE_CMSCI_ATTRIBUTE_WITH_SOURCE_CLAZZ_ATTRIBUTE_VALUE ()");
+    log.info("\n\n");
   }
 
-
+  /*
+   * This method is created to set default values for attributes of targetClazz, In this scenario
+   * the attribute names does not exists in sourceClazz hence values are being set to default
+   * 
+   */
   private void processMapping_SET_DEFAULT_ATTRIBUTE_VALUE(
       CmsCiAndCmsCiAttributesActionMappingsModel mapping) {
     // from mappings
+
     String targetClassName = mapping.getTargetClassname();
     int targetClassId = mapping.getTargetClassId();
     String targetAttributeName = mapping.getTargetAttributeName();
     int targetAttributeId = mapping.getTargetAttributeId();
     String targetDefaultValue = mapping.getTargetDefaultValue();
+
+    log.info("Begin: processMapping_SET_DEFAULT_ATTRIBUTE_VALUE ()");
+    log.info("**************************************************************************");
+    log.info("\n\n");
 
     List<Integer> ciIds =
         dal.getCiIdsForNsAndClazz(this.nsForPlatformCiComponents, targetClassName);
@@ -314,21 +339,41 @@ public class CMSCIMappingsProcessor {
 
     }
 
-
+    log.info("End: processMapping_SET_DEFAULT_ATTRIBUTE_VALUE ()");
+    log.info("**************************************************************************");
+    log.info("\n\n");
 
   }
 
   private void process_SWITCH_CMSCI_ATTRIBUTE_ID(
       CmsCiAndCmsCiAttributesActionMappingsModel mapping) {
-
+    log.info("\n\n");
+    log.info("**************************************************************************");
+    log.info("Begin: process_SWITCH_CMSCI_ATTRIBUTE_ID ()");
     int sourceAttributeId = mapping.getSourceAttributeId();
+    String sourceAttributeName = mapping.getSourceAttributeName();
+    int sourceClazzId = mapping.getSourceClassId();
+    String sourceClazzname = mapping.getSourceClassname();
+
 
     int targetClassId = mapping.getTargetClassId();
+    String targetClazzname = mapping.getTargetClassname();
+
     int targetAttributeId = mapping.getTargetAttributeId();
 
-    dal.switchCMSCIAttribuetId(this.nsForPlatformCiComponents, targetClassId, targetAttributeId,
-        sourceAttributeId);
+    /*
+     * dal.switchCMSCIAttribuetId(this.nsForPlatformCiComponents, targetClassId, targetAttributeId,
+     * sourceAttributeId);
+     */
+    dal.switchCMSCIAttribuetId(this.nsForPlatformCiComponents, sourceAttributeId,
+        sourceAttributeName, sourceClazzId, sourceClazzname, targetClassId, targetClazzname,
+        targetAttributeId);
 
+
+
+    log.info("End: process_SWITCH_CMSCI_ATTRIBUTE_ID ()");
+    log.info("**************************************************************************");
+    log.info("\n\n");
   }
 
 

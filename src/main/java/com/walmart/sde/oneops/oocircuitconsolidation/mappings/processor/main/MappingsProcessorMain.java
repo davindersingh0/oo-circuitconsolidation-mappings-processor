@@ -71,11 +71,11 @@ public class MappingsProcessorMain {
     
     cmsciMappingsProcessor.processCMSCIMappings(transformationMappings.get(IConstants.cmsCiMappingsMapKey));
     
-    CMSCIRelationsMappingsProcessor  cmsciRelationsMappingsProcessor = new CMSCIRelationsMappingsProcessor(ns,
+/*    CMSCIRelationsMappingsProcessor  cmsciRelationsMappingsProcessor = new CMSCIRelationsMappingsProcessor(ns,
         platformName, ooPhase, envName, conn);
     
     cmsciRelationsMappingsProcessor.processCMSCIRelationsMappings(transformationMappings.get(IConstants.cmsCiRelationsMappingsMapKey));
-    log.info("Completed processing transformation mappings");
+    log.info("Completed processing transformation mappings");*/
     
     
   }

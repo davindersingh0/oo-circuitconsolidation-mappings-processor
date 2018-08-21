@@ -41,8 +41,7 @@ public class CircuitconsolidationUtil {
 
         return ns + "/" + envName + "/manifest/" + platformName + "/1";
       case IConstants.OPERATE_PHASE:
-        log.error("ooPhase {} not supported", ooPhase);
-        throw new UnSupportedOperation(ooPhase + " not supported");
+        return ns + "/" + envName + "/bom/" + platformName + "/1";
 
       default:
         log.error("ooPhase {} not supported", ooPhase);

@@ -222,6 +222,8 @@ public class KloopzCmDal {
 
   }
 
+  @Deprecated
+  // Deprecated to allow new comments in new function
   public void switchCMSCIAttribuetId(String nsForPlatformCiComponents, int updatedTargetClazzId,
       int targetAttributeId, int sourceAttributeId) {
 
@@ -397,7 +399,9 @@ public class KloopzCmDal {
      * event_type_id) values (nextval('event_pk_seq'), p_ci_id, 'cm_ci' , 200);
      */
 
-
+    log.info("Begin: createNewCMSCIAttribute ()");
+    log.info("-------------------------------------------------------------------------");
+    log.info("\n");
     try {
 
       String SQL_INSERT_AddNewCMSCIAttribute =
@@ -422,7 +426,9 @@ public class KloopzCmDal {
     } catch (Exception e) {
       throw new UnSupportedOperation("Error while creating new CMSCI " + e.getMessage());
     }
-
+    log.info("End: createNewCMSCIAttribute ()");
+    log.info("-------------------------------------------------------------------------");
+    log.info("\n");
   }
 
   public void createCMSCIRelation(int ci_relation_id, int ns_id, int from_ci_id,
@@ -723,6 +729,49 @@ public class KloopzCmDal {
       throw new UnSupportedOperation("Error while fetching records" + e.getMessage());
     }
     return ciIds;
+
+  }
+
+  public void switchCMSCIAttribuetId(String nsForPlatformCiComponents, int sourceAttributeId,
+      String sourceAttributeName, int sourceClazzId, String sourceClazzname, int targetClassId,
+      String targetClazzname, int targetAttributeId) {
+    String SQL_UPDATE_CMSCI_switchAttributeId =
+        "UPDATE cm_ci_attributes set attribute_id=? where ci_attribute_id in "
+            + "(SELECT ci_attribute_id from cm_ci_attributes ca, md_class_attributes cla, cm_ci ci, ns_namespaces ns "
+            + "where " + "ca.ci_id=ci.ci_id " + "and ci.ns_id = ns.ns_id "
+            + "and ca.attribute_id=cla.attribute_id " + "and ns.ns_path =? " + "and ci.class_id=? "
+            + "and ca.attribute_id=?); ";
+
+
+    try {
+
+      log.info(
+          "Switching Attribute ID for attributeName <{}> from sourceAttributeId <{}> to targetAttributeId <{}>",
+          sourceAttributeName, sourceAttributeId, targetAttributeId);
+      log.info(
+          "Switching Attribute ID belonging to sourceClazzId <{}>, sourceClazzname <{}> to targetClassId <{}> targetClazzname <{}>",
+          sourceClazzId, sourceClazzname, targetClassId, targetClazzname);
+
+
+      log.info("SQL_UPDATE_CMSCI_switchAttributeId        : " + SQL_UPDATE_CMSCI_switchAttributeId);
+      PreparedStatement preparedStatement =
+          conn.prepareStatement(SQL_UPDATE_CMSCI_switchAttributeId);
+
+      preparedStatement.setInt(1, targetAttributeId);
+      preparedStatement.setString(2, nsForPlatformCiComponents);
+      preparedStatement.setInt(3, targetClassId);
+      preparedStatement.setInt(4, sourceAttributeId);
+
+
+      log.info("preparedStatement: " + preparedStatement);
+
+      int numberOfUpdatedRecords = preparedStatement.executeUpdate();
+      log.info("numberOfUpdatedRecords for SQL_UPDATE_CMSCI_switchAttributeId: {} ",
+          numberOfUpdatedRecords);
+
+    } catch (Exception e) {
+      throw new UnSupportedOperation("Error while fetching records" + e.getMessage());
+    }
 
   }
 
