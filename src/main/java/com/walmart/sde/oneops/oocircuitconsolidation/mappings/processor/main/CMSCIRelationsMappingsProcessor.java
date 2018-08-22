@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import com.google.gson.Gson;
 import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.config.IConstants;
 import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.dal.KloopzCmDal;
+import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.exception.UnSupportedOperation;
 import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.exception.UnSupportedTransformationMappingException;
 import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.model.CmsCIRelationAndRelationAttributesActionMappingsModel;
 import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.util.CircuitconsolidationUtil;
@@ -88,7 +89,7 @@ public class CMSCIRelationsMappingsProcessor {
       if (entityType.equalsIgnoreCase("CMSCI_RELATION")) {
         switch (action) {
           case "CREATE_RELATION":
-           // process_CREATE_RELATION(mapping);
+            process_CREATE_RELATION(mapping);
 
             break;
           case "DELETE_RELATION":
@@ -105,7 +106,7 @@ public class CMSCIRelationsMappingsProcessor {
 
         switch (action) {
           case "ADD_RELATION_ATTRIBUTE":
-           // process_ADD_RELATION_ATTRIBUTE(mapping);
+            // process_ADD_RELATION_ATTRIBUTE(mapping);
             break;
 
           default:
@@ -129,6 +130,36 @@ public class CMSCIRelationsMappingsProcessor {
 
   private void process_CREATE_RELATION(
       CmsCIRelationAndRelationAttributesActionMappingsModel mapping) {
+
+
+    log.info("\n\n");
+    log.info("**************************************************************************");
+    log.info("Begin: process_CREATE_RELATION() ");
+
+    if (this.ooPhase.equals(IConstants.DESIGN_PHASE)
+        || this.ooPhase.equals(IConstants.TRANSITION_PHASE)) {
+      process_CREATE_RELATION_IN_DESIGN_TRANSITION_Phase(mapping);
+    } else if (this.ooPhase.equals(IConstants.OPERATE_PHASE)) {
+      process_CREATE_RELATION_IN_OPERATE_Phase(mapping);
+    } else {
+
+      throw new UnSupportedOperation("ooPhase: <" + this.ooPhase + "> not supported");
+    }
+
+    log.info("End: process_CREATE_RELATION() ");
+    log.info("**************************************************************************");
+    log.info("\n\n");
+
+  }
+
+
+  private void process_CREATE_RELATION_IN_DESIGN_TRANSITION_Phase(
+      CmsCIRelationAndRelationAttributesActionMappingsModel mapping) {
+
+
+    log.info("\n\n");
+    log.info("---------------------------------------------------------------------------");
+    log.info("Begin: process_CREATE_RELATION_IN_DESIGN_TRANSITION_Phase() ");
 
     String targetCMSCIRelationName = mapping.getTargetCmsCiRelationName();
     int targetCMSCIRelationId = mapping.getTargetCmsCiRelationId();
@@ -165,7 +196,66 @@ public class CMSCIRelationsMappingsProcessor {
 
     log.info(
         "creating CMSCIRelation targetCMSCIRelationName {} targetCMSCIRelationId {} targetFromCMSCIClazzName {}, targetFromCMSCIClazzId {}, "
-            + "targetToCMSCIClazzName {} targetToCMSCIClazzId{}",
+            + "targetToCMSCIClazzName {} targetToCMSCIClazzId {}",
+        targetCMSCIRelationName, targetCMSCIRelationId, targetFromCMSCIClazzName,
+        targetFromCMSCIClazzId, targetToCMSCIClazzName, targetToCMSCIClazzId);
+
+    log.info("creating CMSCIRelation fromCiIds <{}> To toCiIds <{}>", fromCiIds.toString(),
+        toCiIds.toString());
+
+
+    for (int fromCiId : fromCiIds) {
+      for (int toCiId : toCiIds) {
+
+        int ci_relation_id = dal.getNext_cm_pk_seqId();
+        String relation_goid = fromCiId + "-" + targetCMSCIRelationId + "-" + toCiId;
+        dal.createCMSCIRelation(ci_relation_id, nsId, fromCiId, relation_goid,
+            targetCMSCIRelationId, toCiId, ci_state_id, comments);
+      }
+
+    }
+
+    log.info("End: process_CREATE_RELATION_IN_DESIGN_TRANSITION_Phase() ");
+    log.info("---------------------------------------------------------------------------");
+    log.info("\n\n");
+
+  }
+
+  private void process_CREATE_RELATION_IN_OPERATE_Phase(
+      CmsCIRelationAndRelationAttributesActionMappingsModel mapping) {
+
+    log.info("\n\n");
+    log.info("---------------------------------------------------------------------------");
+    log.info("Begin: process_CREATE_RELATION_IN_OPERATE_Phase() ");
+
+    String targetCMSCIRelationName = mapping.getTargetCmsCiRelationName();
+    int targetCMSCIRelationId = mapping.getTargetCmsCiRelationId();
+    String targetFromCMSCIClazzName = mapping.getTargetFromCmsCiClazzName();
+    int targetFromCMSCIClazzId = mapping.getTargetFromCmsCiClazzId();
+    String targetToCMSCIClazzName = mapping.getTargetToCmsCiClazzName();
+    int targetToCMSCIClazzId = mapping.getTargetToCmsCiClazzId();
+    String comments = IConstants.CIRCUIT_CONSOLIDATION_COMMENTS;
+
+
+    int ci_state_id = 100;
+
+    List<Integer> fromCiIds = new ArrayList<Integer>();
+
+    fromCiIds = dal.getCiIdsForNsAndClazz(nsForPlatformCiComponents, targetFromCMSCIClazzName);
+    log.info("fromCiIds {} for nsForPlatformCiComponents {} targetFromCMSCIClazzName {}", fromCiIds, this.nsForPlatformCiComponents,
+        targetFromCMSCIClazzName);
+
+    int nsId = dal.getNsIdForNsPath(this.nsForPlatformCiComponents);
+
+    List<Integer> toCiIds =
+        dal.getCiIdsForNsAndClazz(this.nsForPlatformCiComponents, targetToCMSCIClazzName);
+
+    log.info("toCiIds {} for nsForPlatformCiComponents {} targetFromCMSCIClazzName {}", toCiIds, this.nsForPlatformCiComponents,
+        targetToCMSCIClazzName);
+
+    log.info(
+        "creating CMSCIRelation targetCMSCIRelationName {} targetCMSCIRelationId {} targetFromCMSCIClazzName {}, targetFromCMSCIClazzId {}, "
+            + "targetToCMSCIClazzName {} targetToCMSCIClazzId {}",
         targetCMSCIRelationName, targetCMSCIRelationId, targetFromCMSCIClazzName,
         targetFromCMSCIClazzId, targetToCMSCIClazzName, targetToCMSCIClazzId);
 
@@ -187,6 +277,10 @@ public class CMSCIRelationsMappingsProcessor {
 
     }
 
+    log.info("End: process_CREATE_RELATION_IN_OPERATE_Phase() ");
+    log.info("---------------------------------------------------------------------------");
+    log.info("\n\n");
+
 
   }
 
@@ -200,7 +294,8 @@ public class CMSCIRelationsMappingsProcessor {
     int sourceCmsCiRelationId = mapping.getSourceCmsCiRelationId();
 
 
-    log.info("Begin: process_DELETE_RELATION() **************************************************************************");
+    log.info(
+        "Begin: process_DELETE_RELATION() **************************************************************************");
     List<Integer> fromCiIds = new ArrayList<Integer>();
 
     if (sourceCmsCiRelationName.contains("base.Requires")) {
@@ -225,7 +320,8 @@ public class CMSCIRelationsMappingsProcessor {
 
     dal.deleteCiRelations(sourceFromCmsCiClazzName, fromCiIds, sourceToCmsCiClazzName, toCiIds,
         sourceCmsCiRelationId, sourceCmsCiRelationName, this.nsForPlatformCiComponents);
-    log.info("End: process_DELETE_RELATION() **************************************************************************");
+    log.info(
+        "End: process_DELETE_RELATION() **************************************************************************");
   }
 
   private void process_ADD_RELATION_ATTRIBUTE(

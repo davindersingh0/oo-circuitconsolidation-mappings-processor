@@ -1,12 +1,15 @@
 package com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.main;
 
 import java.sql.Connection;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.google.gson.Gson;
 import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.config.IConstants;
 import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.dal.KloopzCmDal;
+import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.exception.UnSupportedOperation;
 import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.exception.UnSupportedTransformationMappingException;
 import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.model.CmsCiAndCmsCiAttributesActionMappingsModel;
 import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.util.CircuitconsolidationUtil;
@@ -75,10 +78,10 @@ public class CMSCIMappingsProcessor {
     Gson gson = new Gson();
 
     // update source property of platform from walmartLabs to oneops
-    if (ooPhase.equals(IConstants.DESIGN_PHASE)) {
-      dal.updatePlatformSourceProperty(this.ns, platformName);
-    } else if (ooPhase.equals(IConstants.TRANSITION_PHASE)) {
-      dal.updatePlatformSourceProperty(this.nsForPlatformCiComponents, platformName);
+    if (this.ooPhase.equals(IConstants.DESIGN_PHASE)) {
+      dal.updatePlatformSourceProperty(this.ns, this.platformName);
+    } else if (this.ooPhase.equals(IConstants.TRANSITION_PHASE)) {
+      dal.updatePlatformSourceProperty(this.nsForPlatformCiComponents, this.platformName);
     }
 
 
@@ -95,11 +98,11 @@ public class CMSCIMappingsProcessor {
             break;
 
           case "DELETE_CMSCI":
-            // process_DELETE_CMSCI(mapping);
+            process_DELETE_CMSCI(mapping);
             break;
 
           case "CREATE_CMSCI":
-            // TODO: process_CREATE_CMSCI(mapping);
+            process_CREATE_CMSCI(mapping);
             break;
 
 
@@ -160,22 +163,89 @@ public class CMSCIMappingsProcessor {
      * #{ciName}, #{comments}, #{ciStateId}, #{createdBy})}
      */
 
+    log.info("\n\n");
+    log.info("**************************************************************************");
+    log.info("Begin: process_CREATE_CMSCI() ");
 
     int nsId = dal.getNsIdForNsPath(nsForPlatformCiComponents);
-    int ciId = dal.getNext_cm_pk_seqId();
-
     int targetClazzId = mapping.getTargetClassId();
-    String ciName = "os"; // hardcoded value, so far only 1 CI is being created
-
-    String goid = nsId + "-" + targetClazzId + "-" + ciId;
 
     String comments = IConstants.CIRCUIT_CONSOLIDATION_COMMENTS;
     int ciStateId = 100;
     String createdBy = IConstants.CIRCUIT_CONSOLIDATION_USER;
 
-    dal.createCMSCI(nsId, ciId, targetClazzId, ciName, goid, ciStateId, comments, createdBy);
+    if (this.ooPhase.equals(IConstants.DESIGN_PHASE)
+        || this.ooPhase.equals(IConstants.TRANSITION_PHASE)) {
+      int ciId = dal.getNext_cm_pk_seqId();
+      String goid = nsId + "-" + targetClazzId + "-" + ciId;
+      String ciName = "os"; // hardcoded value, so far only 1 CI is being created
+      dal.createCMSCI(nsId, ciId, targetClazzId, ciName, goid, ciStateId, comments, createdBy);
+      log.info("os component created with ciId: {}", ciId);
+
+    } else if (this.ooPhase.equals(IConstants.OPERATE_PHASE)) {
+
+      Map<Integer, String> bomComputeCiIdAndCiNameMap =
+          dal.getCiIdsAndCiNameForNsAndClazz(this.nsForPlatformCiComponents, "bom.Compute");
+
+      for (String bomComputeCiName : bomComputeCiIdAndCiNameMap.values()) {
+
+        if (!bomComputeCiName.contains("compute")) {
+          throw new UnSupportedOperation(
+              "bomComputeCiName <" + bomComputeCiName + "> is not valid compute ciName");
+        }
+
+        String ciName = bomComputeCiName.replace("compute", "os");// hardcoded value, so far only 1
+                                                                  // CI is being created
+        int ciId = dal.getNext_cm_pk_seqId();
+        String goid = nsId + "-" + targetClazzId + "-" + ciId;
+        dal.createCMSCI(nsId, ciId, targetClazzId, ciName, goid, ciStateId, comments, createdBy);
+        log.info("os component created with ciId: {}", ciId);
+
+      }
 
 
+    } else {
+
+      throw new UnSupportedOperation(this.ooPhase + "is not supported");
+    }
+
+    log.info("End: process_CREATE_CMSCI() ");
+    log.info("**************************************************************************");
+    log.info("\n\n");
+
+  }
+
+
+
+  private List<String> getPlatformClouds() {
+    // TODO Auto-generated method stub
+
+    List<String> cloudsInPlatform = new ArrayList<String>();
+
+
+    Map<String, Integer> computeCisWith_baseAsRealizedRelation_map =
+        dal.getComputeCisDeployedInPlatformByNsPath(this.nsForPlatformCiComponents);
+
+    for (String computeCiName : computeCisWith_baseAsRealizedRelation_map.keySet()) {
+
+      List<Integer> cloudCiIdsFromComputeCiNames = getcloudCiIdsFromComputeCiNames(computeCiName);
+
+
+
+    }
+
+    return cloudsInPlatform;
+  }
+
+
+
+  private List<Integer> getcloudCiIdsFromComputeCiNames(String computeCiName) {
+    List<Integer> cloudCiIds = new ArrayList<Integer>();
+
+    log.info("computeCiName: {}", computeCiName);
+
+
+    return null;
   }
 
 
@@ -269,30 +339,75 @@ public class CMSCIMappingsProcessor {
         dal.getCiIdsForNsAndClazz(this.nsForPlatformCiComponents, targetClassName);
     log.info("targetClazzCiIds: " + targetClazzCiIds.toString());
 
-    if (sourceClazzCiIds.size() != 1 || targetClazzCiIds.size() != 1) {
+    if ((this.ooPhase.equals(IConstants.DESIGN_PHASE)
+        || this.ooPhase.equals(IConstants.TRANSITION_PHASE))) {
 
-      throw new UnsupportedOperationException("sourceClazzCiIds: " + sourceClazzCiIds
-          + " targetClazzCiIds: " + targetClazzCiIds + " one of the ciIds != 1");
+      if ((sourceClazzCiIds.size() != 1 || targetClazzCiIds.size() != 1)) {
+
+        throw new UnsupportedOperationException("sourceClazzCiIds: " + sourceClazzCiIds
+            + " targetClazzCiIds: " + targetClazzCiIds + " one of the ciIds != 1");
+      }
+      String cmsCiAttributeValue = dal.getCMSCIAttributeValueByAttribNameAndCiId(
+          sourceClazzCiIds.get(0), sourceClazzAttributeId, sourceClazzAttributeName);
+
+      int ciId = targetClazzCiIds.get(0);
+      int ci_attribute_id = dal.getNext_cm_pk_seqId();
+
+
+      log.info(
+          "copying cmsCiAttribute sourceClazzAttributeName {} from sourceClassName {} & sourceClassId {} To targetClassName {} & targetClassId {}",
+          sourceClazzAttributeName, sourceClassName, sourceClassId, targetClassName, targetClassId);
+
+      log.info("sourceClazzAttributeName{} sourceClazzAttributeId {}", sourceClazzAttributeName,
+          sourceClazzAttributeId);
+      log.info("targetClazzAttributeName{} targetClazzAttributeId {}", targetClazzAttributeName,
+          targetClazzAttributeId);
+
+      dal.createNewCMSCIAttribute(ci_attribute_id, ciId, targetClazzAttributeId,
+          cmsCiAttributeValue, IConstants.CIRCUIT_CONSOLIDATION_USER,
+          IConstants.CIRCUIT_CONSOLIDATION_COMMENTS);
+
+
+
+    } else if (this.ooPhase.equals(IConstants.OPERATE_PHASE)) {
+
+      log.info("copy attribute process for OPERATE Phase");
+      if ((sourceClazzCiIds.size() < 1 || targetClazzCiIds.size() < 1)) {
+
+        throw new UnsupportedOperationException("sourceClazzCiIds: " + sourceClazzCiIds
+            + " targetClazzCiIds: " + targetClazzCiIds + " one of the ciIds < 1");
+      }
+
+      for (int i = 0; i < targetClazzCiIds.size(); i++) {
+
+        String cmsCiAttributeValue = dal.getCMSCIAttributeValueByAttribNameAndCiId(
+            sourceClazzCiIds.get(0), sourceClazzAttributeId, sourceClazzAttributeName);
+
+        int ciId = targetClazzCiIds.get(i);
+        int ci_attribute_id = dal.getNext_cm_pk_seqId();
+
+
+        log.info(
+            "copying cmsCiAttribute sourceClazzAttributeName {} from sourceClassName {} & sourceClassId {} To targetClassName {} & targetClassId {}",
+            sourceClazzAttributeName, sourceClassName, sourceClassId, targetClassName,
+            targetClassId);
+
+        log.info("sourceClazzAttributeName{} sourceClazzAttributeId {}", sourceClazzAttributeName,
+            sourceClazzAttributeId);
+        log.info("targetClazzAttributeName{} targetClazzAttributeId {}", targetClazzAttributeName,
+            targetClazzAttributeId);
+
+        dal.createNewCMSCIAttribute(ci_attribute_id, ciId, targetClazzAttributeId,
+            cmsCiAttributeValue, IConstants.CIRCUIT_CONSOLIDATION_USER,
+            IConstants.CIRCUIT_CONSOLIDATION_COMMENTS);
+        log.info("created new ci_attribute_id {} for ciId {} with value from compute to os component", ci_attribute_id, ciId);
+
+      }
+
+
     }
 
-    String cmsCiAttributeValue = dal.getCMSCIAttributeValueByAttribNameAndCiId(
-        sourceClazzCiIds.get(0), sourceClazzAttributeId, sourceClazzAttributeName);
 
-    int ciId = targetClazzCiIds.get(0);
-    int ci_attribute_id = dal.getNext_cm_pk_seqId();
-
-
-    log.info(
-        "copying cmsCiAttribute sourceClazzAttributeName {} from sourceClassName {} & sourceClassId {} To targetClassName {} & targetClassId {}",
-        sourceClazzAttributeName, sourceClassName, sourceClassId, targetClassName, targetClassId);
-
-    log.info("sourceClazzAttributeName{} sourceClazzAttributeId {}", sourceClazzAttributeName,
-        sourceClazzAttributeId);
-    log.info("targetClazzAttributeName{} targetClazzAttributeId {}", targetClazzAttributeName,
-        targetClazzAttributeId);
-
-    dal.createNewCMSCIAttribute(ci_attribute_id, ciId, targetClazzAttributeId, cmsCiAttributeValue,
-        IConstants.CIRCUIT_CONSOLIDATION_USER, IConstants.CIRCUIT_CONSOLIDATION_COMMENTS);
 
     log.info("**************************************************************************");
     log.info("End: processMapping_CREATE_CMSCI_ATTRIBUTE_WITH_SOURCE_CLAZZ_ATTRIBUTE_VALUE ()");

@@ -4,9 +4,12 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.google.gson.Gson;
 import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.config.IConstants;
 import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.exception.UnSupportedOperation;
 
@@ -71,6 +74,45 @@ public class KloopzCmDal {
     return ciIds;
   }
 
+  public Map<Integer,String> getCiIdsAndCiNameForNsAndClazz(String ns, String clazz) {
+
+    Map<Integer,String> ciIdAndCiNameMap = new HashMap<Integer,String>();
+    try {
+
+      String SQL_SELECT_NakedCMSCIByNsAndClazz = "select " + "ci.ci_id as ciId, "
+          + "ci.ci_name as ciName," + "ci.class_id as ciClassId," + "cl.class_name as ciClassName,"
+          + "cl.impl as impl, " + "ci.ns_id as nsId, " + "ns.ns_path as nsPath, "
+          + "ci.ci_goid as ciGoid, " + "ci.comments, " + "ci.ci_state_id as ciStateId, "
+          + "st.state_name as ciState, " + "ci.last_applied_rfc_id as lastAppliedRfcId, "
+          + "ci.created_by as createdBy, " + "ci.updated_by as updatedBy, " + "ci.created, "
+          + "ci.updated " + "from cm_ci ci, md_classes cl, ns_namespaces ns, cm_ci_state st "
+          + "where ns.ns_path = ? " + "and cl.class_name = ? " + "and ci.class_id = cl.class_id "
+          + "and ci.ns_id = ns.ns_id " + "and ci.ci_state_id = st.ci_state_id;";
+
+      log.info("SQL_SELECT_NakedCMSCIByNsAndClazz : " + SQL_SELECT_NakedCMSCIByNsAndClazz);
+      PreparedStatement preparedStatement_SELECT_NakedCMSCIByNsAndClazz =
+          conn.prepareStatement(SQL_SELECT_NakedCMSCIByNsAndClazz);
+      preparedStatement_SELECT_NakedCMSCIByNsAndClazz.setString(1, ns);
+      preparedStatement_SELECT_NakedCMSCIByNsAndClazz.setString(2, clazz);
+
+      log.info("preparedStatement_SELECT_NakedCMSCIByNsAndClazz: "
+          + preparedStatement_SELECT_NakedCMSCIByNsAndClazz);
+      ResultSet resultSet = preparedStatement_SELECT_NakedCMSCIByNsAndClazz.executeQuery();
+
+      int numberOfRecords = 0;
+      while (resultSet.next()) {
+        ciIdAndCiNameMap.put(resultSet.getInt("ciId"), resultSet.getString("ciName"));
+        numberOfRecords++;
+
+      }
+
+      log.info("numberOfRecords: " + numberOfRecords);
+    } catch (Exception e) {
+      throw new UnSupportedOperation("Error while fetching records" + e.getMessage());
+    }
+    return ciIdAndCiNameMap;
+  }
+  
   public List<Integer> deleteCmsCisForNsAndClazz(String nsForPlatformCiComponents, String clazz) {
 
     List<Integer> ciIds = new ArrayList<Integer>();
@@ -774,5 +816,96 @@ public class KloopzCmDal {
     }
 
   }
+
+
+
+  /*
+   * public void getCloudsForPlatformDeployment(String nsForPlatformCiComponents, String
+   * platformName, String fromCiClazz, String toCiClazz, String relationName) {
+   * 
+   * try {
+   * 
+   * 
+   * String SQL_SELECT_getCloudsForPlatformDeployment = " select " +
+   * "cir.ci_relation_id as ciRelationId, cir.ns_id as nsId, " +
+   * "ns.ns_path as nsPath, cir.from_ci_id as fromCiId, " +
+   * "cir.relation_goid as relationGoid, cir.relation_id as relationId, " +
+   * "mdr.relation_name as relationName, cir.to_ci_id as toCiId, " +
+   * "cir.ci_state_id as relationStateId, cis.state_name as relationState, " +
+   * "cir.last_applied_rfc_id as lastAppliedRfcId, cir.comments, cir.created, " + "cir.updated " +
+   * "from cm_ci_relations cir, md_relations mdr, cm_ci_state cis, cm_ci from_ci, md_classes from_mdc, cm_ci to_ci, md_classes to_mdc, ns_namespaces ns "
+   * + "where cir.ns_id = ns.ns_id and cir.ci_state_id = cis.ci_state_id " +
+   * "and cir.relation_id = mdr.relation_id and cir.from_ci_id = from_ci.ci_id " +
+   * "and from_ci.class_id = from_mdc.class_id and cir.to_ci_id = to_ci.ci_id " +
+   * "and to_ci.class_id = to_mdc.class_id and ns.ns_path=? and mdr.relation_name=? " +
+   * "and from_mdc.class_name=? and to_mdc.class_name=? ";
+   * 
+   * 
+   * 
+   * log.info("SQL_SELECT_getCloudsForPlatformDeployment: " +
+   * SQL_SELECT_getCloudsForPlatformDeployment); PreparedStatement preparedStatement =
+   * conn.prepareStatement(SQL_SELECT_getCloudsForPlatformDeployment);
+   * preparedStatement.setString(1, nsForPlatformCiComponents); preparedStatement.setString(2,
+   * relationName); preparedStatement.setString(3, fromCiClazz); preparedStatement.setString(4,
+   * toCiClazz);
+   * 
+   * log.info("preparedStatement: " + preparedStatement); ResultSet result =
+   * preparedStatement.executeQuery();
+   * 
+   * while(result.next()) {
+   * 
+   * log.info("result: " + result); log.info("toCiId: "+result.getInt("toCiId")); }
+   * 
+   * } catch (Exception e) { throw new UnSupportedOperation("Error while fetching records" +
+   * e.getMessage()); }
+   * 
+   * }
+   */
+
+  public Map<String, Integer> getComputeCisDeployedInPlatformByNsPath(
+      String nsForPlatformCiComponents) {
+
+    try {
+
+      Map<String, Integer> map = new HashMap<String, Integer>();
+
+
+      String SQL_SELECT_getCloudsForPlatformDeployment =
+          " select cir.ci_relation_id as ciRelationId, cir.ns_id as nsId, ns.ns_path as nsPath, cir.from_ci_id as fromCiId, "
+              + "cir.relation_goid as relationGoid, cir.relation_id as relationId, "
+              + "mdr.relation_name as relationName, cir.to_ci_id toCiId, to_ci.ci_name as toCiName, cir.ci_state_id as relationStateId, "
+              + "cis.state_name as relationState, cir.last_applied_rfc_id as lastAppliedRfcId, cir.comments, cir.created, "
+              + " cir.updated from cm_ci_relations cir, md_relations mdr, cm_ci_state cis, cm_ci from_ci, md_classes from_mdc, cm_ci to_ci, md_classes to_mdc, "
+              + "ns_namespaces ns where cir.ns_id = ns.ns_id and cir.ci_state_id = cis.ci_state_id and cir.relation_id = mdr.relation_id and cir.from_ci_id = from_ci.ci_id "
+              + "and from_ci.class_id = from_mdc.class_id and cir.to_ci_id = to_ci.ci_id and to_ci.class_id = to_mdc.class_id and "
+              + "ns.ns_Path=? and  " + " mdr.relation_name='base.RealizedAs' and "
+              + "from_mdc.class_name='manifest.Compute' and " + "to_mdc.class_name='bom.Compute' ";
+
+      log.info("SQL_SELECT_getCloudsForPlatformDeployment: "
+          + SQL_SELECT_getCloudsForPlatformDeployment);
+      PreparedStatement preparedStatement =
+          conn.prepareStatement(SQL_SELECT_getCloudsForPlatformDeployment);
+      preparedStatement.setString(1, nsForPlatformCiComponents);
+
+      log.info("preparedStatement: " + preparedStatement);
+      ResultSet result = preparedStatement.executeQuery();
+
+      while (result.next()) {
+
+    
+        log.info("computeCiName: {}, computeCi base.RealizedAs ciRelationId with cloud: {}"+result.getString("toCiName"), result.getInt("ciRelationId"));
+        
+        map.put(result.getString("toCiName"), result.getInt("ciRelationId"));
+
+      }
+
+      return map;
+
+    } catch (Exception e) {
+      throw new UnSupportedOperation("Error while fetching records" + e.getMessage());
+    }
+
+  }
+
 
 }
