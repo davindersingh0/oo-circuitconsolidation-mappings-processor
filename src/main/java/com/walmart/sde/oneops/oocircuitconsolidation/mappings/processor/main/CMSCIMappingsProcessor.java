@@ -169,6 +169,8 @@ public class CMSCIMappingsProcessor {
 
     int nsId = dal.getNsIdForNsPath(nsForPlatformCiComponents);
     int targetClazzId = mapping.getTargetClassId();
+    String targetClazzName = mapping.getTargetClassname();
+    
 
     String comments = IConstants.CIRCUIT_CONSOLIDATION_COMMENTS;
     int ciStateId = 100;
@@ -180,7 +182,7 @@ public class CMSCIMappingsProcessor {
       String goid = nsId + "-" + targetClazzId + "-" + ciId;
       String ciName = "os"; // hardcoded value, so far only 1 CI is being created
       dal.createCMSCI(nsId, ciId, targetClazzId, ciName, goid, ciStateId, comments, createdBy);
-      log.info("os component created with ciId: {}", ciId);
+      log.info("os component created with ciId: {} for targetClazzName {}", ciId,targetClazzName);
 
     } else if (this.ooPhase.equals(IConstants.OPERATE_PHASE)) {
 
@@ -200,7 +202,7 @@ public class CMSCIMappingsProcessor {
         String goid = nsId + "-" + targetClazzId + "-" + ciId;
         dal.createCMSCI(nsId, ciId, targetClazzId, ciName, goid, ciStateId, comments, createdBy);
         log.info("os component created with ciId: {}", ciId);
-
+        log.info("os component created with ciId: {} for targetClazzName {}", ciId,targetClazzName);
       }
 
 

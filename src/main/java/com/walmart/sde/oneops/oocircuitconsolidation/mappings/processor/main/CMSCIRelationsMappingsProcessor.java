@@ -2,7 +2,11 @@ package com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.main;
 
 import java.sql.Connection;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.google.gson.Gson;
@@ -18,6 +22,7 @@ public class CMSCIRelationsMappingsProcessor {
 
   private final Logger log = LoggerFactory.getLogger(getClass());
 
+  Gson gson = new Gson();
   String ns;
   String platformName;
   String ooPhase;
@@ -221,69 +226,6 @@ public class CMSCIRelationsMappingsProcessor {
 
   }
 
-  private void process_CREATE_RELATION_IN_OPERATE_Phase(
-      CmsCIRelationAndRelationAttributesActionMappingsModel mapping) {
-
-    log.info("\n\n");
-    log.info("---------------------------------------------------------------------------");
-    log.info("Begin: process_CREATE_RELATION_IN_OPERATE_Phase() ");
-
-    String targetCMSCIRelationName = mapping.getTargetCmsCiRelationName();
-    int targetCMSCIRelationId = mapping.getTargetCmsCiRelationId();
-    String targetFromCMSCIClazzName = mapping.getTargetFromCmsCiClazzName();
-    int targetFromCMSCIClazzId = mapping.getTargetFromCmsCiClazzId();
-    String targetToCMSCIClazzName = mapping.getTargetToCmsCiClazzName();
-    int targetToCMSCIClazzId = mapping.getTargetToCmsCiClazzId();
-    String comments = IConstants.CIRCUIT_CONSOLIDATION_COMMENTS;
-
-
-    int ci_state_id = 100;
-
-    List<Integer> fromCiIds = new ArrayList<Integer>();
-
-    fromCiIds = dal.getCiIdsForNsAndClazz(nsForPlatformCiComponents, targetFromCMSCIClazzName);
-    log.info("fromCiIds {} for nsForPlatformCiComponents {} targetFromCMSCIClazzName {}", fromCiIds, this.nsForPlatformCiComponents,
-        targetFromCMSCIClazzName);
-
-    int nsId = dal.getNsIdForNsPath(this.nsForPlatformCiComponents);
-
-    List<Integer> toCiIds =
-        dal.getCiIdsForNsAndClazz(this.nsForPlatformCiComponents, targetToCMSCIClazzName);
-
-    log.info("toCiIds {} for nsForPlatformCiComponents {} targetFromCMSCIClazzName {}", toCiIds, this.nsForPlatformCiComponents,
-        targetToCMSCIClazzName);
-
-    log.info(
-        "creating CMSCIRelation targetCMSCIRelationName {} targetCMSCIRelationId {} targetFromCMSCIClazzName {}, targetFromCMSCIClazzId {}, "
-            + "targetToCMSCIClazzName {} targetToCMSCIClazzId {}",
-        targetCMSCIRelationName, targetCMSCIRelationId, targetFromCMSCIClazzName,
-        targetFromCMSCIClazzId, targetToCMSCIClazzName, targetToCMSCIClazzId);
-
-    log.info("creating CMSCIRelation fromCiIds <{}> To toCiIds <{}>", fromCiIds.toString(),
-        toCiIds.toString());
-
-
-    for (int fromCiId : fromCiIds) {
-      for (int toCiId : toCiIds) {
-
-        int ci_relation_id = dal.getNext_cm_pk_seqId();
-        String relation_goid = fromCiId + "-" + targetCMSCIRelationId + "-" + toCiId;
-        dal.createCMSCIRelation(ci_relation_id, nsId, fromCiId, relation_goid,
-            targetCMSCIRelationId, toCiId, ci_state_id, comments);
-
-
-      }
-
-
-    }
-
-    log.info("End: process_CREATE_RELATION_IN_OPERATE_Phase() ");
-    log.info("---------------------------------------------------------------------------");
-    log.info("\n\n");
-
-
-  }
-
 
   private void process_DELETE_RELATION(
       CmsCIRelationAndRelationAttributesActionMappingsModel mapping) {
@@ -373,6 +315,134 @@ public class CMSCIRelationsMappingsProcessor {
 
   }
 
+  private void process_CREATE_RELATION_IN_OPERATE_Phase(
+      CmsCIRelationAndRelationAttributesActionMappingsModel mapping) {
 
+    log.info("\n\n");
+    log.info("---------------------------------------------------------------------------");
+    log.info("Begin: process_CREATE_RELATION_IN_OPERATE_Phase() ");
+
+    String targetCMSCIRelationName = mapping.getTargetCmsCiRelationName();
+    int targetCMSCIRelationId = mapping.getTargetCmsCiRelationId();
+    String targetFromCMSCIClazzName = mapping.getTargetFromCmsCiClazzName();
+    int targetFromCMSCIClazzId = mapping.getTargetFromCmsCiClazzId();
+    String targetToCMSCIClazzName = mapping.getTargetToCmsCiClazzName();
+    int targetToCMSCIClazzId = mapping.getTargetToCmsCiClazzId();
+    String comments = IConstants.CIRCUIT_CONSOLIDATION_COMMENTS;
+
+
+    int ci_state_id = 100;
+    int nsId = dal.getNsIdForNsPath(this.nsForPlatformCiComponents);
+
+
+    Map<String, Integer> fromCiIdsAndCiNamesMap = dal
+        .getCiNamesAndCiIdsForNsAndClazz(this.nsForPlatformCiComponents, targetFromCMSCIClazzName);
+
+    log.info("fromCiIdsAndCiNamesMap: {}", gson.toJson(fromCiIdsAndCiNamesMap));
+
+    List<String> fromBomCiNamesList = new ArrayList<String>(fromCiIdsAndCiNamesMap.keySet());
+
+
+    Map<String, Integer> toCiIdsAndCiNamesMap =
+        dal.getCiNamesAndCiIdsForNsAndClazz(this.nsForPlatformCiComponents, targetToCMSCIClazzName);
+
+    log.info("toCiIdsAndCiNamesMap: {}", gson.toJson(toCiIdsAndCiNamesMap));
+
+    List<String> toBomCiNamesList = new ArrayList<String>(toCiIdsAndCiNamesMap.keySet());
+
+    Map<String, Set<String>> fromBomCisAndToBomCisPairs =
+        getFromBomCisAndToBomCisPairs(fromBomCiNamesList, toBomCiNamesList);
+    log.info("fromBomCisAndToBomCisPairs: {}", gson.toJson(fromBomCisAndToBomCisPairs));
+
+    for (String fromBomCiName : fromBomCisAndToBomCisPairs.keySet()) {
+      Set<String> toBomCiNameSet = fromBomCisAndToBomCisPairs.get(fromBomCiName);
+
+      for (String toBomCiName : toBomCiNameSet) {
+
+        int fromCiId = fromCiIdsAndCiNamesMap.get(fromBomCiName);
+        int toCiId = toCiIdsAndCiNamesMap.get(toBomCiName);
+
+        log.info(
+            "targetFromCMSCIClazzName {} - targetFromCMSCIClazzId {}, targetCMSCIRelationName {}, targetToCMSCIClazzName {} - targetToCMSCIClazzId {}",
+            targetFromCMSCIClazzName, targetFromCMSCIClazzId, targetCMSCIRelationName,
+            targetToCMSCIClazzName, targetToCMSCIClazzId);
+        log.info("creating relation from {} >> {} >> {}", fromBomCiName, targetCMSCIRelationName,
+            toBomCiName);
+        log.info("creating relation from {} >> {} >> {}", fromCiId, targetCMSCIRelationId, toCiId);
+
+
+        int ci_relation_id = dal.getNext_cm_pk_seqId();
+        String relation_goid = fromCiId + "-" + targetCMSCIRelationId + "-" + toCiId;
+
+        dal.createCMSCIRelation(ci_relation_id, nsId, fromCiId, relation_goid,
+            targetCMSCIRelationId, toCiId, ci_state_id, comments);
+
+      }
+
+    }
+
+
+
+    log.info("End: process_CREATE_RELATION_IN_OPERATE_Phase() ");
+    log.info("---------------------------------------------------------------------------");
+    log.info("\n\n");
+
+
+  }
+
+  private String getBomCiSuffix(String bomCiName) {
+    
+    String[] strArr= bomCiName.split("-");
+   
+    StringBuffer bomcCiSuffix=new StringBuffer();
+    for (int i = strArr.length-2; i <= strArr.length-1; i++) {
+      
+      bomcCiSuffix=bomcCiSuffix.append("-").append(strArr[i]);
+      
+    }
+    log.info("Full suffix: "+bomcCiSuffix);
+    return new String(bomcCiSuffix);
+
+  }
+  
+  private String getBomCiPrefix(String bomCiName) {
+    
+    String bomCiSuffix=getBomCiSuffix(bomCiName);
+    String bomCiPrefix=bomCiName.substring(0, bomCiName.length()-bomCiSuffix.length());
+    
+    log.info("Full Prefix: "+bomCiPrefix);
+    return new String(bomCiPrefix);
+
+  }
+
+  private Map<String, Set<String>> getFromBomCisAndToBomCisPairs(List<String> fromBomCiNamesList,
+      List<String> toBomCiNamesList) {
+
+    Map<String, Set<String>> fromBomCisAndToBomCisPairsMap = new HashMap<String, Set<String>>();
+
+
+    for (String fromBomCiName : fromBomCiNamesList) {
+
+      log.info("fromBomCiName: " + fromBomCiName);
+      String fromBomCiNameSuffix = getBomCiSuffix(fromBomCiName);
+
+      Set<String> set = new HashSet<String>();
+
+      for (String toBomCiName : toBomCiNamesList) {
+
+        if (toBomCiName.contains(fromBomCiNameSuffix)) {
+
+          set.add(toBomCiName);
+          fromBomCisAndToBomCisPairsMap.put(fromBomCiName, set);
+          continue;
+        }
+
+      }
+      fromBomCisAndToBomCisPairsMap.put(fromBomCiName, set);
+    }
+
+    return fromBomCisAndToBomCisPairsMap;
+
+  }
 
 }
