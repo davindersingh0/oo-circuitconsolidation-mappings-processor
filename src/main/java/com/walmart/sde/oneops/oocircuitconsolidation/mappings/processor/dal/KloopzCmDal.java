@@ -75,7 +75,7 @@ public class KloopzCmDal {
   }
 
   //Method getCiIdsForNsAndClazz can be replaced by this method
-  public Map<String, Integer> getCiNamesAndCiIdsForNsAndClazz(String ns, String clazz) {
+  public Map<String, Integer> getCiNamesAndCiIdsMapForNsAndClazz(String ns, String clazz) {
 
     Map<String, Integer> ciIdsAndCiNamesMap = new HashMap<String, Integer>();
     try {

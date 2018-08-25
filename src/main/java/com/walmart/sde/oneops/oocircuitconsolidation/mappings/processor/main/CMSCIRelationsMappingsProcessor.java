@@ -334,24 +334,55 @@ public class CMSCIRelationsMappingsProcessor {
     int ci_state_id = 100;
     int nsId = dal.getNsIdForNsPath(this.nsForPlatformCiComponents);
 
+    Map<String, Integer> fromCiIdsAndCiNamesMap = new HashMap<String, Integer>();
 
-    Map<String, Integer> fromCiIdsAndCiNamesMap = dal
-        .getCiNamesAndCiIdsForNsAndClazz(this.nsForPlatformCiComponents, targetFromCMSCIClazzName);
+    if (targetCMSCIRelationName.equals("base.RealizedAs")) {
+      String transitonPhaseNsPath = CircuitconsolidationUtil.getnsForPlatformCiComponents(this.ns,
+          this.platformName, IConstants.TRANSITION_PHASE, this.envName);
+      fromCiIdsAndCiNamesMap =
+          dal.getCiNamesAndCiIdsMapForNsAndClazz(transitonPhaseNsPath, targetFromCMSCIClazzName);
+
+    } else {
+      fromCiIdsAndCiNamesMap = dal.getCiNamesAndCiIdsMapForNsAndClazz(
+          this.nsForPlatformCiComponents, targetFromCMSCIClazzName);
+    }
+
 
     log.info("fromCiIdsAndCiNamesMap: {}", gson.toJson(fromCiIdsAndCiNamesMap));
 
     List<String> fromBomCiNamesList = new ArrayList<String>(fromCiIdsAndCiNamesMap.keySet());
 
 
-    Map<String, Integer> toCiIdsAndCiNamesMap =
-        dal.getCiNamesAndCiIdsForNsAndClazz(this.nsForPlatformCiComponents, targetToCMSCIClazzName);
+    Map<String, Integer> toCiIdsAndCiNamesMap = new HashMap<String, Integer>();
+    if (targetCMSCIRelationName.equals("base.DeployedTo")) {
+
+      Map<String, Integer> bomComputeCiNamesAndCiIdsMap = dal.getCiNamesAndCiIdsMapForNsAndClazz(
+          this.nsForPlatformCiComponents, "bom.oneops.1.Compute");
+      toCiIdsAndCiNamesMap = getCiNamesAndCiIdsMapForCloudCis(bomComputeCiNamesAndCiIdsMap);
+
+    } else {
+      toCiIdsAndCiNamesMap = dal.getCiNamesAndCiIdsMapForNsAndClazz(this.nsForPlatformCiComponents,
+          targetToCMSCIClazzName);
+    }
+
+
 
     log.info("toCiIdsAndCiNamesMap: {}", gson.toJson(toCiIdsAndCiNamesMap));
 
     List<String> toBomCiNamesList = new ArrayList<String>(toCiIdsAndCiNamesMap.keySet());
 
-    Map<String, Set<String>> fromBomCisAndToBomCisPairs =
-        getFromBomCisAndToBomCisPairs(fromBomCiNamesList, toBomCiNamesList);
+    Map<String, Set<String>> fromBomCisAndToBomCisPairs = new HashMap<String, Set<String>>();
+
+    if (targetCMSCIRelationName.equals("base.RealizedAs")) {
+      fromBomCisAndToBomCisPairs =
+          getFromManifestCisAndToBomCisPairs(fromBomCiNamesList, toBomCiNamesList);
+
+    } else {
+      fromBomCisAndToBomCisPairs =
+          getFromBomCisAndToBomCisPairs(fromBomCiNamesList, toBomCiNamesList);
+
+    }
+
     log.info("fromBomCisAndToBomCisPairs: {}", gson.toJson(fromBomCisAndToBomCisPairs));
 
     for (String fromBomCiName : fromBomCisAndToBomCisPairs.keySet()) {
@@ -390,27 +421,64 @@ public class CMSCIRelationsMappingsProcessor {
 
   }
 
-  private String getBomCiSuffix(String bomCiName) {
-    
-    String[] strArr= bomCiName.split("-");
-   
-    StringBuffer bomcCiSuffix=new StringBuffer();
-    for (int i = strArr.length-2; i <= strArr.length-1; i++) {
+  private Map<String, Integer> getCiNamesAndCiIdsMapForCloudCis(
+      Map<String, Integer> bomComputeCiNamesAndCiIdsMap) {
+
+    try {
+
+      Map<String, Integer> ciNamesAndCiIdsMapForCloudCis = new HashMap<String, Integer>();
+
+      Set<Integer> clouidCiIdSet = new HashSet<Integer>();
+      for (String bomComputeCiName : bomComputeCiNamesAndCiIdsMap.keySet()) {
+
+        String[] bomComputeCiNameArr = bomComputeCiName.split("-");
+        int clouidCiId = new Integer(bomComputeCiNameArr[bomComputeCiNameArr.length - 2]);
+        log.info("clouidCiId {} from bomCompute ci name {} " + clouidCiId, bomComputeCiName);
+        if (clouidCiId == 0) {
+          throw new UnSupportedOperation(
+              "bomComputeCiName <" + bomComputeCiName + "> generated 0 clouidCiId");
+        }
+        clouidCiIdSet.add(clouidCiId);
+
+      }
+      log.info("clouidCiIdSet: " + clouidCiIdSet);
       
-      bomcCiSuffix=bomcCiSuffix.append("-").append(strArr[i]);
+      //TODO: create business Logic for getting CloudCiName
       
+      
+      log.info("ciNamesAndCiIdsMapForCloudCis: " + ciNamesAndCiIdsMapForCloudCis);
+      return ciNamesAndCiIdsMapForCloudCis;
+    } catch (NullPointerException | ArrayIndexOutOfBoundsException e) {
+      throw new UnSupportedOperation(
+          "Error while processing bomComputeCiNamesAndCiIdsMap for parsing cloud ciId"
+              + e.getMessage());
     }
-    log.info("Full suffix: "+bomcCiSuffix);
+
+  
+  }
+
+
+  private String getBomCiSuffix(String bomCiName) {
+
+    String[] strArr = bomCiName.split("-");
+
+    StringBuffer bomcCiSuffix = new StringBuffer();
+    for (int i = strArr.length - 2; i <= strArr.length - 1; i++) {
+
+      bomcCiSuffix = bomcCiSuffix.append("-").append(strArr[i]);
+
+    }
+    log.info("Full suffix: " + bomcCiSuffix);
     return new String(bomcCiSuffix);
 
   }
-  
+
   private String getBomCiPrefix(String bomCiName) {
-    
-    String bomCiSuffix=getBomCiSuffix(bomCiName);
-    String bomCiPrefix=bomCiName.substring(0, bomCiName.length()-bomCiSuffix.length());
-    
-    log.info("Full Prefix: "+bomCiPrefix);
+
+    String bomCiSuffix = getBomCiSuffix(bomCiName);
+    String bomCiPrefix = bomCiName.substring(0, bomCiName.length() - bomCiSuffix.length());
+
+    log.info("Full Prefix: " + bomCiPrefix);
     return new String(bomCiPrefix);
 
   }
@@ -425,6 +493,36 @@ public class CMSCIRelationsMappingsProcessor {
 
       log.info("fromBomCiName: " + fromBomCiName);
       String fromBomCiNameSuffix = getBomCiSuffix(fromBomCiName);
+
+      Set<String> set = new HashSet<String>();
+
+      for (String toBomCiName : toBomCiNamesList) {
+
+        if (toBomCiName.contains(fromBomCiNameSuffix)) {
+
+          set.add(toBomCiName);
+          fromBomCisAndToBomCisPairsMap.put(fromBomCiName, set);
+          continue;
+        }
+
+      }
+      fromBomCisAndToBomCisPairsMap.put(fromBomCiName, set);
+    }
+
+    return fromBomCisAndToBomCisPairsMap;
+
+  }
+
+  private Map<String, Set<String>> getFromManifestCisAndToBomCisPairs(
+      List<String> fromBomCiNamesList, List<String> toBomCiNamesList) {
+
+    Map<String, Set<String>> fromBomCisAndToBomCisPairsMap = new HashMap<String, Set<String>>();
+
+
+    for (String fromBomCiName : fromBomCiNamesList) {
+
+      log.info("fromBomCiName: " + fromBomCiName);
+      String fromBomCiNameSuffix = fromBomCiName;
 
       Set<String> set = new HashSet<String>();
 
