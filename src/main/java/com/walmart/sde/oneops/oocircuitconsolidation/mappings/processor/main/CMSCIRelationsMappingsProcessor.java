@@ -16,6 +16,7 @@ import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.exceptio
 import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.exception.UnSupportedTransformationMappingException;
 import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.model.CmsCIRelationAndRelationAttributesActionMappingsModel;
 import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.util.CircuitconsolidationUtil;
+import bsh.StringUtil;
 
 public class CMSCIRelationsMappingsProcessor {
 
@@ -111,7 +112,7 @@ public class CMSCIRelationsMappingsProcessor {
 
         switch (action) {
           case "ADD_RELATION_ATTRIBUTE":
-            // process_ADD_RELATION_ATTRIBUTE(mapping);
+            process_ADD_RELATION_ATTRIBUTE(mapping);
             break;
 
           default:
@@ -289,13 +290,14 @@ public class CMSCIRelationsMappingsProcessor {
     String owner = IConstants.CIRCUIT_CONSOLIDATION_USER;
     String comments = IConstants.CIRCUIT_CONSOLIDATION_COMMENTS;
 
-
     log.info(
-        "creating CMSCIRelation attribute attributeName: {} attributeId {} for targetCMSCIRelationName {} targetCMSCIRelationId {}, "
-            + "targetFromCMSCIClazzName {}, targetFromCMSCIClazzId {}, targetToCMSCIClazzName{} targetToCMSCIClazzId {} with dfValue {} , djValue {}",
-        attributeName, attributeId, targetCMSCIRelationName, targetCMSCIRelationId,
-        targetFromCMSCIClazzName, targetFromCMSCIClazzId, targetToCMSCIClazzName,
-        targetToCMSCIClazzId, dfValue, djValue);
+        "creating CMSCIRelation attribute attributeName: {} attributeId: {} , with dfValue {} & djValue {}",
+        attributeName, attributeId, dfValue, djValue);
+
+    log.info("fromClazz {} relationName {} toClazz", targetFromCMSCIClazzName,
+        targetCMSCIRelationName, targetToCMSCIClazzName);
+    log.info("fromClazzId {} relationId {} toClazzId", targetFromCMSCIClazzId,
+        targetCMSCIRelationId, targetToCMSCIClazzId);
 
     List<Integer> ci_relation_ids =
         dal.getCMSCIRelationIds_By_Ns_RelationName_FromClazzToClazz(this.nsForPlatformCiComponents,
@@ -304,9 +306,18 @@ public class CMSCIRelationsMappingsProcessor {
     log.info("List of ci_relation_ids for transformation mapping for ADD_RELATION_ATTRIBUTE <{}>",
         ci_relation_ids.toString());
 
+    if (this.ooPhase.equals(IConstants.OPERATE_PHASE)) {
+      String attributeValue =
+          getCiRelatonDfDjValue(attributeId, attributeName, targetCMSCIRelationName);
+      dfValue = attributeValue;
+      djValue = attributeValue;
+
+    }
+
     for (int ci_relation_id : ci_relation_ids) {
-      log.info("Adding CMSCIRelation attributes for ci_relation_id <{}>", ci_relation_id);
       int ci_rel_attribute_id = dal.getNext_cm_pk_seqId();
+      log.info("Adding new ci_rel_attribute_id <{}> to ci_relation_id <{}>", ci_rel_attribute_id,
+          ci_relation_id);
 
       dal.createCMSCIRelationAttribute(ci_rel_attribute_id, ci_relation_id, attributeId, dfValue,
           djValue, owner, comments);
@@ -314,6 +325,8 @@ public class CMSCIRelationsMappingsProcessor {
 
 
   }
+
+
 
   private void process_CREATE_RELATION_IN_OPERATE_Phase(
       CmsCIRelationAndRelationAttributesActionMappingsModel mapping) {
@@ -354,18 +367,15 @@ public class CMSCIRelationsMappingsProcessor {
 
 
     Map<String, Integer> toCiIdsAndCiNamesMap = new HashMap<String, Integer>();
+
     if (targetCMSCIRelationName.equals("base.DeployedTo")) {
 
-      Map<String, Integer> bomComputeCiNamesAndCiIdsMap = dal.getCiNamesAndCiIdsMapForNsAndClazz(
-          this.nsForPlatformCiComponents, "bom.oneops.1.Compute");
-      toCiIdsAndCiNamesMap = getCiNamesAndCiIdsMapForCloudCis(bomComputeCiNamesAndCiIdsMap);
+      toCiIdsAndCiNamesMap = getCiNamesAndCiIdsMapForCloudCis(fromBomCiNamesList);
 
     } else {
       toCiIdsAndCiNamesMap = dal.getCiNamesAndCiIdsMapForNsAndClazz(this.nsForPlatformCiComponents,
           targetToCMSCIClazzName);
     }
-
-
 
     log.info("toCiIdsAndCiNamesMap: {}", gson.toJson(toCiIdsAndCiNamesMap));
 
@@ -377,7 +387,12 @@ public class CMSCIRelationsMappingsProcessor {
       fromBomCisAndToBomCisPairs =
           getFromManifestCisAndToBomCisPairs(fromBomCiNamesList, toBomCiNamesList);
 
-    } else {
+    } else if (targetCMSCIRelationName.equals("base.DeployedTo")) {
+      fromBomCisAndToBomCisPairs =
+          getFromBomCisAndToCloudCisPairs(fromBomCiNamesList, toCiIdsAndCiNamesMap);
+    }
+
+    else {
       fromBomCisAndToBomCisPairs =
           getFromBomCisAndToBomCisPairs(fromBomCiNamesList, toBomCiNamesList);
 
@@ -421,32 +436,30 @@ public class CMSCIRelationsMappingsProcessor {
 
   }
 
-  private Map<String, Integer> getCiNamesAndCiIdsMapForCloudCis(
-      Map<String, Integer> bomComputeCiNamesAndCiIdsMap) {
+  private Map<String, Integer> getCiNamesAndCiIdsMapForCloudCis(List<String> fromBomCiNamesList) {
+
+    Map<String, Integer> ciNamesAndCiIdsMapForCloudCis = new HashMap<String, Integer>();
 
     try {
 
-      Map<String, Integer> ciNamesAndCiIdsMapForCloudCis = new HashMap<String, Integer>();
-
       Set<Integer> clouidCiIdSet = new HashSet<Integer>();
-      for (String bomComputeCiName : bomComputeCiNamesAndCiIdsMap.keySet()) {
+      for (String bomCiName : fromBomCiNamesList) {
 
-        String[] bomComputeCiNameArr = bomComputeCiName.split("-");
-        int clouidCiId = new Integer(bomComputeCiNameArr[bomComputeCiNameArr.length - 2]);
-        log.info("clouidCiId {} from bomCompute ci name {} " + clouidCiId, bomComputeCiName);
-        if (clouidCiId == 0) {
-          throw new UnSupportedOperation(
-              "bomComputeCiName <" + bomComputeCiName + "> generated 0 clouidCiId");
-        }
+        int clouidCiId = getcloudCiIdFromBomCiName(bomCiName);
+
         clouidCiIdSet.add(clouidCiId);
 
       }
-      log.info("clouidCiIdSet: " + clouidCiIdSet);
-      
-      //TODO: create business Logic for getting CloudCiName
-      
-      
-      log.info("ciNamesAndCiIdsMapForCloudCis: " + ciNamesAndCiIdsMapForCloudCis);
+
+      log.info("clouidCiIdSet {}: ", gson.toJson(clouidCiIdSet));
+
+      for (int cloudCiId : clouidCiIdSet) {
+
+        String cloudCiName = dal.getClouidCiNameAndClazzByCiId(cloudCiId);
+        ciNamesAndCiIdsMapForCloudCis.put(cloudCiName, cloudCiId);
+      }
+
+      log.info("ciNamesAndCiIdsMapForCloudCis: " + gson.toJson(ciNamesAndCiIdsMapForCloudCis));
       return ciNamesAndCiIdsMapForCloudCis;
     } catch (NullPointerException | ArrayIndexOutOfBoundsException e) {
       throw new UnSupportedOperation(
@@ -454,7 +467,7 @@ public class CMSCIRelationsMappingsProcessor {
               + e.getMessage());
     }
 
-  
+
   }
 
 
@@ -541,6 +554,85 @@ public class CMSCIRelationsMappingsProcessor {
 
     return fromBomCisAndToBomCisPairsMap;
 
+  }
+
+  private Map<String, Set<String>> getFromBomCisAndToCloudCisPairs(List<String> fromBomCiNamesList,
+      Map<String, Integer> toCiIdsAndCiNamesMap) {
+
+
+    Map<String, Set<String>> fromBomCisAndToBomCisPairsMap = new HashMap<String, Set<String>>();
+
+
+    for (String fromBomCiName : fromBomCiNamesList) {
+
+      log.info("fromBomCiName: " + fromBomCiName);
+      int cloudCiIdFromBomCiName = getcloudCiIdFromBomCiName(fromBomCiName);
+
+      Set<String> set = new HashSet<String>();
+
+      for (String toBomCiName : toCiIdsAndCiNamesMap.keySet()) {
+
+        int toCloudCiId = toCiIdsAndCiNamesMap.get(toBomCiName);
+
+        if (cloudCiIdFromBomCiName == toCloudCiId) {
+
+          set.add(toBomCiName);
+          fromBomCisAndToBomCisPairsMap.put(fromBomCiName, set);
+          continue;
+        }
+
+      }
+      fromBomCisAndToBomCisPairsMap.put(fromBomCiName, set);
+    }
+
+    return fromBomCisAndToBomCisPairsMap;
+
+  }
+
+  private int getcloudCiIdFromBomCiName(String bomCiName) {
+
+
+    String[] bomComputeCiNameArr = bomCiName.split("-");
+    int clouidCiId = new Integer(bomComputeCiNameArr[bomComputeCiNameArr.length - 2]);
+    log.info("clouidCiId {} from bomCompute ci name {} " + clouidCiId, bomCiName);
+    if (clouidCiId == 0) {
+      throw new UnSupportedOperation("bomComputeCiName <" + bomCiName + "> generated 0 clouidCiId");
+    }
+
+    return clouidCiId;
+
+  }
+
+  private String getCiRelatonDfDjValue(int attributeId, String attributeName,
+      String targetCMSCIRelationName) {
+
+    String attributeValue = new String();
+
+    if (targetCMSCIRelationName.equals("base.DeployedTo")) {
+
+      if (attributeName.equals("priority")) {
+
+      } else {
+        throw new UnSupportedTransformationMappingException("attributeName <" + attributeName
+            + "> not supported for targetCMSCIRelationName <" + targetCMSCIRelationName + "> ");
+      }
+    }
+
+    if (targetCMSCIRelationName.equals("base.RealizedAs")) {
+
+      if (attributeName.equals("priority")) {
+
+      } else if (attributeName.equals("last_manifest_rfc")) {
+
+      } else {
+        throw new UnSupportedTransformationMappingException("attributeName <" + attributeName
+            + "> not supported for targetCMSCIRelationName <" + targetCMSCIRelationName + "> ");
+      }
+
+    }
+
+
+    return attributeValue;
   }
 
 }

@@ -74,7 +74,7 @@ public class KloopzCmDal {
     return ciIds;
   }
 
-  //Method getCiIdsForNsAndClazz can be replaced by this method
+  // Method getCiIdsForNsAndClazz can be replaced by this method
   public Map<String, Integer> getCiNamesAndCiIdsMapForNsAndClazz(String ns, String clazz) {
 
     Map<String, Integer> ciIdsAndCiNamesMap = new HashMap<String, Integer>();
@@ -113,11 +113,11 @@ public class KloopzCmDal {
     }
     return ciIdsAndCiNamesMap;
   }
-  
- 
-  public Map<Integer,String> getCiIdsAndCiNameForNsAndClazz(String ns, String clazz) {
 
-    Map<Integer,String> ciIdAndCiNameMap = new HashMap<Integer,String>();
+
+  public Map<Integer, String> getCiIdsAndCiNameForNsAndClazz(String ns, String clazz) {
+
+    Map<Integer, String> ciIdAndCiNameMap = new HashMap<Integer, String>();
     try {
 
       String SQL_SELECT_NakedCMSCIByNsAndClazz = "select " + "ci.ci_id as ciId, "
@@ -153,7 +153,7 @@ public class KloopzCmDal {
     }
     return ciIdAndCiNameMap;
   }
-  
+
   public List<Integer> deleteCmsCisForNsAndClazz(String nsForPlatformCiComponents, String clazz) {
 
     List<Integer> ciIds = new ArrayList<Integer>();
@@ -933,9 +933,10 @@ public class KloopzCmDal {
 
       while (result.next()) {
 
-    
-        log.info("computeCiName: {}, computeCi base.RealizedAs ciRelationId with cloud: {}"+result.getString("toCiName"), result.getInt("ciRelationId"));
-        
+
+        log.info("computeCiName: {}, computeCi base.RealizedAs ciRelationId with cloud: {}"
+            + result.getString("toCiName"), result.getInt("ciRelationId"));
+
         map.put(result.getString("toCiName"), result.getInt("ciRelationId"));
 
       }
@@ -945,6 +946,57 @@ public class KloopzCmDal {
     } catch (Exception e) {
       throw new UnSupportedOperation("Error while fetching records" + e.getMessage());
     }
+
+  }
+
+  public String getClouidCiNameAndClazzByCiId(int cloudCiId) {
+    String cloudCiName = new String();
+
+    try {
+
+      String SQL_SELECT_getClouidCiNameAndClazzByCiId = "select " + "ci.ci_id as ciId, "
+          + "ci.ci_name as ciName," + "ci.class_id as ciClassId," + "cl.class_name as ciClassName,"
+          + "cl.impl as impl, " + "ci.ns_id as nsId, " + "ns.ns_path as nsPath, "
+          + "ci.ci_goid as ciGoid, " + "ci.comments, " + "ci.ci_state_id as ciStateId, "
+          + "st.state_name as ciState, " + "ci.last_applied_rfc_id as lastAppliedRfcId, "
+          + "ci.created_by as createdBy, " + "ci.updated_by as updatedBy, " + "ci.created, "
+          + "ci.updated " + "from cm_ci ci, md_classes cl, ns_namespaces ns, cm_ci_state st "
+          + "where ci.ci_id = ? " + "and cl.class_name = ? " + "and ci.class_id = cl.class_id "
+          + "and ci.ns_id = ns.ns_id " + "and ci.ci_state_id = st.ci_state_id;";
+
+      log.info(
+          "SQL_SELECT_getClouidCiNameAndClazzByCiId : " + SQL_SELECT_getClouidCiNameAndClazzByCiId);
+
+      PreparedStatement preparedStatement_SELECT_getClouidCiNameAndClazzByCiId =
+          conn.prepareStatement(SQL_SELECT_getClouidCiNameAndClazzByCiId);
+      preparedStatement_SELECT_getClouidCiNameAndClazzByCiId.setInt(1, cloudCiId);
+      preparedStatement_SELECT_getClouidCiNameAndClazzByCiId.setString(2, "account.Cloud");
+      
+      
+
+
+      log.info("preparedStatement_SELECT_getClouidCiNameAndClazzByCiId: "
+          + preparedStatement_SELECT_getClouidCiNameAndClazzByCiId);
+      ResultSet resultSet = preparedStatement_SELECT_getClouidCiNameAndClazzByCiId.executeQuery();
+
+      int numberOfRecords = 0;
+      while (resultSet.next()) {
+        cloudCiName = resultSet.getString("ciName");
+        numberOfRecords++;
+
+      }
+
+      log.info("numberOfRecords: " + numberOfRecords);
+
+      if (numberOfRecords != 1) {
+        throw new UnSupportedOperation(
+            "numberOfRecords <" + numberOfRecords + "> for cloud ciId must be 1");
+      }
+
+    } catch (Exception e) {
+      throw new UnSupportedOperation("Error while fetching records" + e.getMessage());
+    }
+    return cloudCiName;
 
   }
 
