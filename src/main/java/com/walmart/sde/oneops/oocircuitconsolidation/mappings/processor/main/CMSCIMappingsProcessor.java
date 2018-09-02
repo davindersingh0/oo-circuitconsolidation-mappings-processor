@@ -25,7 +25,7 @@ public class CMSCIMappingsProcessor {
   String nsForPlatformCiComponents;
   Connection conn;
   KloopzCmDal dal;
-
+  Gson gson = new Gson();
 
   CMSCIMappingsProcessor(String ns, String platformName, String ooPhase, String envName,
       Connection conn) {
@@ -157,12 +157,6 @@ public class CMSCIMappingsProcessor {
     // OneOps core code
 
 
-    /*
-     * <insert id="createCI" parameterType="com.oneops.cms.cm.domain.CmsCI"
-     * statementType="CALLABLE"> {call cm_create_ci(#{ciId} ,#{nsId}, #{ciClassId}, #{ciGoid},
-     * #{ciName}, #{comments}, #{ciStateId}, #{createdBy})}
-     */
-
     log.info("\n\n");
     log.info("**************************************************************************");
     log.info("Begin: process_CREATE_CMSCI() ");
@@ -170,7 +164,7 @@ public class CMSCIMappingsProcessor {
     int nsId = dal.getNsIdForNsPath(nsForPlatformCiComponents);
     int targetClazzId = mapping.getTargetClassId();
     String targetClazzName = mapping.getTargetClassname();
-    
+
 
     String comments = IConstants.CIRCUIT_CONSOLIDATION_COMMENTS;
     int ciStateId = 100;
@@ -182,7 +176,7 @@ public class CMSCIMappingsProcessor {
       String goid = nsId + "-" + targetClazzId + "-" + ciId;
       String ciName = "os"; // hardcoded value, so far only 1 CI is being created
       dal.createCMSCI(nsId, ciId, targetClazzId, ciName, goid, ciStateId, comments, createdBy);
-      log.info("os component created with ciId: {} for targetClazzName {}", ciId,targetClazzName);
+      log.info("os component created with ciId: {} for targetClazzName {}", ciId, targetClazzName);
 
     } else if (this.ooPhase.equals(IConstants.OPERATE_PHASE)) {
 
@@ -202,7 +196,8 @@ public class CMSCIMappingsProcessor {
         String goid = nsId + "-" + targetClazzId + "-" + ciId;
         dal.createCMSCI(nsId, ciId, targetClazzId, ciName, goid, ciStateId, comments, createdBy);
         log.info("os component created with ciId: {}", ciId);
-        log.info("os component created with ciId: {} for targetClazzName {}", ciId,targetClazzName);
+        log.info("os component created with ciId: {} for targetClazzName {}", ciId,
+            targetClazzName);
       }
 
 
@@ -218,50 +213,22 @@ public class CMSCIMappingsProcessor {
   }
 
 
-
-  private List<String> getPlatformClouds() {
-    // TODO Auto-generated method stub
-
-    List<String> cloudsInPlatform = new ArrayList<String>();
-
-
-    Map<String, Integer> computeCisWith_baseAsRealizedRelation_map =
-        dal.getComputeCisDeployedInPlatformByNsPath(this.nsForPlatformCiComponents);
-
-    for (String computeCiName : computeCisWith_baseAsRealizedRelation_map.keySet()) {
-
-      List<Integer> cloudCiIdsFromComputeCiNames = getcloudCiIdsFromComputeCiNames(computeCiName);
-
-
-
-    }
-
-    return cloudsInPlatform;
-  }
-
-
-
-  private List<Integer> getcloudCiIdsFromComputeCiNames(String computeCiName) {
-    List<Integer> cloudCiIds = new ArrayList<Integer>();
-
-    log.info("computeCiName: {}", computeCiName);
-
-
-    return null;
-  }
-
-
-
   private void process_DELETE_CMSCI(CmsCiAndCmsCiAttributesActionMappingsModel mapping) {
-    // List<Integer> ciIdsToDelete=dal.getCiIdsForNsAndClazz(nsForPlatformCiComponents,
-    // mapping.getSourceClassname());
-    // log.info("ciIdsToDelete: "+ciIdsToDelete);
     log.info(
         "Begin: process_DELETE_CMSCI() **************************************************************************");
-    dal.deleteCmsCisForNsAndClazz(nsForPlatformCiComponents, mapping.getSourceClassname());
+
+    log.info("deleting cmsCis for nsForPlatformCiComponents {} and clazz {}",
+        nsForPlatformCiComponents, mapping.getSourceClassname());
+
+    Map<Integer, String> cmsCiIdAndCiNamesToDeleteMap = dal.getCiIdsAndCiNameForNsAndClazz(
+        this.nsForPlatformCiComponents, mapping.getSourceClassname());
+
+    log.info("ciIdsToDelete: " + gson.toJson(cmsCiIdAndCiNamesToDeleteMap));
+
+    dal.deleteCmsCisForNsAndClazz(this.nsForPlatformCiComponents, mapping.getSourceClassname());
     log.info(
         "End: process_DELETE_CMSCI() **************************************************************************");
-    // System.exit(0);
+
 
 
   }
@@ -332,14 +299,17 @@ public class CMSCIMappingsProcessor {
     int targetClazzAttributeId = mapping.getTargetAttributeId();
 
 
+    Map<Integer, String> sourceClazzCiIdsAndNamesMap =
+        dal.getCiIdsAndCiNameForNsAndClazz(this.nsForPlatformCiComponents, sourceClassName);
 
-    List<Integer> sourceClazzCiIds =
-        dal.getCiIdsForNsAndClazz(this.nsForPlatformCiComponents, sourceClassName);
-    log.info("sourceClazzCiIds: " + sourceClazzCiIds.toString());
+    List<Integer> sourceClazzCiIds = new ArrayList<Integer>(sourceClazzCiIdsAndNamesMap.keySet());
 
-    List<Integer> targetClazzCiIds =
-        dal.getCiIdsForNsAndClazz(this.nsForPlatformCiComponents, targetClassName);
-    log.info("targetClazzCiIds: " + targetClazzCiIds.toString());
+
+
+    Map<Integer, String> targetClazzCiIdsAndNamesMap =
+        dal.getCiIdsAndCiNameForNsAndClazz(this.nsForPlatformCiComponents, targetClassName);
+
+    List<Integer> targetClazzCiIds = new ArrayList<Integer>(targetClazzCiIdsAndNamesMap.keySet());
 
     if ((this.ooPhase.equals(IConstants.DESIGN_PHASE)
         || this.ooPhase.equals(IConstants.TRANSITION_PHASE))) {
@@ -382,11 +352,23 @@ public class CMSCIMappingsProcessor {
 
       for (int i = 0; i < targetClazzCiIds.size(); i++) {
 
-        String cmsCiAttributeValue = dal.getCMSCIAttributeValueByAttribNameAndCiId(
-            sourceClazzCiIds.get(0), sourceClazzAttributeId, sourceClazzAttributeName);
-
         int ciId = targetClazzCiIds.get(i);
         int ci_attribute_id = dal.getNext_cm_pk_seqId();
+        String bomCiName = targetClazzCiIdsAndNamesMap.get(ciId);
+        String cmsCiAttributeValue;
+        if (targetClazzAttributeName.equalsIgnoreCase("hostname")) {
+
+
+          log.info("create hostname Attribute value for ciId {} & bomCiName {}", ciId, bomCiName);
+          cmsCiAttributeValue = getHostnameAttributeValue(ciId, bomCiName);
+        } else {
+
+          int referenceCiId = getReferenceCiId(bomCiName, sourceClazzCiIdsAndNamesMap);
+
+          cmsCiAttributeValue = dal.getCMSCIAttributeValueByAttribNameAndCiId(referenceCiId,
+              sourceClazzAttributeId, sourceClazzAttributeName);
+        }
+
 
 
         log.info(
@@ -402,7 +384,9 @@ public class CMSCIMappingsProcessor {
         dal.createNewCMSCIAttribute(ci_attribute_id, ciId, targetClazzAttributeId,
             cmsCiAttributeValue, IConstants.CIRCUIT_CONSOLIDATION_USER,
             IConstants.CIRCUIT_CONSOLIDATION_COMMENTS);
-        log.info("created new ci_attribute_id {} for ciId {} with value from compute to os component", ci_attribute_id, ciId);
+        log.info(
+            "created new ci_attribute_id {} for ciId {} with value from compute to os component",
+            ci_attribute_id, ciId);
 
       }
 
@@ -415,6 +399,31 @@ public class CMSCIMappingsProcessor {
     log.info("End: processMapping_CREATE_CMSCI_ATTRIBUTE_WITH_SOURCE_CLAZZ_ATTRIBUTE_VALUE ()");
     log.info("\n\n");
   }
+
+  private int getReferenceCiId(String bomCiName, Map<Integer, String> sourceClazzCiIdsAndNamesMap) {
+   
+    String bomCiNameSuffix = getBomCiSuffix(bomCiName);
+
+    for (int referenceCiId : sourceClazzCiIdsAndNamesMap.keySet()) {
+
+      String referenceBomCiName = sourceClazzCiIdsAndNamesMap.get(referenceCiId);
+      log.info("referenceBomCiName {}", referenceBomCiName);
+      String referenceBomCiNameSuffix = getBomCiSuffix(referenceBomCiName);
+      log.info("referenceBomCiNameSuffix {}", referenceBomCiNameSuffix);
+
+      if (bomCiNameSuffix.equals(referenceBomCiNameSuffix)) {
+        log.info("mathcing referenceCiId {}", referenceCiId);
+        return referenceCiId;
+      }
+
+    }
+
+    throw new UnSupportedOperation("No matching referecneBomCiName name found for <" + bomCiName
+        + "> in sourceClazzCiIdsAndNamesMap: " + sourceClazzCiIdsAndNamesMap);
+
+  }
+
+
 
   /*
    * This method is created to set default values for attributes of targetClazz, In this scenario
@@ -493,6 +502,29 @@ public class CMSCIMappingsProcessor {
     log.info("\n\n");
   }
 
+  private String getHostnameAttributeValue(int bomCiId, String bomCiName) {
+
+    String bomCiNameSuffix = getBomCiSuffix(bomCiName);
+    String hostnameAttributeValue = this.platformName + bomCiNameSuffix + "-" + bomCiId;
+    log.info("hostnameAttributeValue {}", hostnameAttributeValue);
+    return hostnameAttributeValue;
+  }
+
+  private String getBomCiSuffix(String bomCiName) {
+
+    log.info("input bomCiName {} for suffix", bomCiName);
+    String[] strArr = bomCiName.split("-");
+
+    StringBuffer bomcCiSuffix = new StringBuffer();
+    for (int i = strArr.length - 2; i <= strArr.length - 1; i++) {
+
+      bomcCiSuffix = bomcCiSuffix.append("-").append(strArr[i]);
+
+    }
+    log.info("Full suffix: " + bomcCiSuffix);
+    return new String(bomcCiSuffix);
+
+  }
 
 
 }
