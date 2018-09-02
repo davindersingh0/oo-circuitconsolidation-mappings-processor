@@ -971,8 +971,7 @@ public class KloopzCmDal {
           conn.prepareStatement(SQL_SELECT_getClouidCiNameAndClazzByCiId);
       preparedStatement_SELECT_getClouidCiNameAndClazzByCiId.setInt(1, cloudCiId);
       preparedStatement_SELECT_getClouidCiNameAndClazzByCiId.setString(2, "account.Cloud");
-      
-      
+
 
 
       log.info("preparedStatement_SELECT_getClouidCiNameAndClazzByCiId: "
@@ -999,6 +998,140 @@ public class KloopzCmDal {
     return cloudCiName;
 
   }
+
+  public Map<String, Map<String, String>> getCMSCIRelationIdsMap_By_Ns_RelationName_FromClazzToClazz(
+      String ns_path, String relation_name, String fromClazz, String toClazz) {
+
+    Map<String, Map<String, String>> cmsCiRelationIdsMap =
+        new HashMap<String, Map<String, String>>();
+    try {
+
+      String SQL_SELECT_cmsCiRelationIdsMap_By_Ns_RelationName_FromClazzToClazz =
+          "select cir.ci_relation_id, from_ci.ci_id fromCiId, from_ci.ci_name fromCiName, to_ci.ci_id toCiId, to_ci.ci_name toCiName from"
+              + " cm_ci_relations cir, md_relations mdr, cm_ci_state cis, cm_ci from_ci, md_classes from_mdc, cm_ci to_ci, md_classes to_mdc, ns_namespaces ns"
+              + " where ns.ns_path=?  and cir.ns_id = ns.ns_id "
+              + " and cir.ci_state_id = cis.ci_state_id  and cir.relation_id = mdr.relation_id  "
+              + " and mdr.relation_name = ?  and cir.from_ci_id = from_ci.ci_id "
+              + " and from_ci.class_id = from_mdc.class_id   and from_mdc.class_name = ? "
+              + " and cir.to_ci_id = to_ci.ci_id  and to_ci.class_id = to_mdc.class_id "
+              + " and to_mdc.class_name = ? ";
+
+
+      log.info("SQL_SELECT_cmsCiRelationIdsMap_By_Ns_RelationName_FromClazzToClazz: "
+          + SQL_SELECT_cmsCiRelationIdsMap_By_Ns_RelationName_FromClazzToClazz);
+
+      PreparedStatement preparedStatement =
+          conn.prepareStatement(SQL_SELECT_cmsCiRelationIdsMap_By_Ns_RelationName_FromClazzToClazz);
+
+      preparedStatement.setString(1, ns_path);
+      preparedStatement.setString(2, relation_name);
+      preparedStatement.setString(3, fromClazz);
+      preparedStatement.setString(4, toClazz);
+
+
+      log.info("preparedStatement: " + preparedStatement);
+      ResultSet resultSet = preparedStatement.executeQuery();
+
+      int numberOfRecords = 0;
+      while (resultSet.next()) {
+        String ci_relation_id = resultSet.getString("ci_relation_id");
+        String fromCiId = resultSet.getString("fromCiId");
+        String fromCiName = resultSet.getString("fromCiName");
+        String toCiId = resultSet.getString("toCiId");
+        String toCiName = resultSet.getString("toCiName");
+
+        Map<String, String> map = new HashMap<String, String>();
+
+        map.put("ci_relation_id", ci_relation_id);
+        map.put("fromCiId", fromCiId);
+        map.put("fromCiName", fromCiName);
+        map.put("toCiId", toCiId);
+        map.put("toCiName", toCiName);
+
+        String key = fromCiName + "|" + relation_name + "|" + toCiName;
+        log.info("ci_relation_id {} key: {}", ci_relation_id, key);
+        cmsCiRelationIdsMap.put(key, map);
+
+        numberOfRecords++;
+      }
+      log.info(
+          "Number of CmsCiRelations: <{}> for ns_path <{}> relation_name <{}> fromClazz <{}> toClazz <{}>",
+          numberOfRecords, ns_path, relation_name, fromClazz, toClazz);
+
+
+    } catch (Exception e) {
+      throw new UnSupportedOperation("Error while fetching records" + e.getMessage());
+    }
+
+
+    return cmsCiRelationIdsMap;
+
+  }
+
+  public String getCIRelationAttrByCiRelIdAndAttribName(int ci_relation_id, String attribute_name) {
+
+
+
+    try {
+
+      String SQL_SELECT_getCIRelationAttrByCiRelIdAndAttribName = "select "
+          + "            cira.ci_rel_attribute_id as ciRelationAttributeId,"
+          + "            cira.ci_relation_id as ciRelationId,"
+          + "            cira.attribute_id as attributeId,"
+          + "            mra.attribute_name as attributeName,"
+          + "            cira.df_attribute_value as dfValue,"
+          + "            cira.dj_attribute_value as djValue," + "            cira.owner,"
+          + "            cira.comments," + "            cira.created," + "            cira.updated "
+          + "        from cm_ci_relation_attributes cira, md_relation_attributes mra\n"
+          + "        where cira.ci_relation_id = ?"
+          + "            and cira.attribute_id = mra.attribute_id"
+          + "            and mra.attribute_name=?";
+
+
+      log.info("SQL_SELECT_getCIRelationAttrByCiRelIdAndAttribName: "
+          + SQL_SELECT_getCIRelationAttrByCiRelIdAndAttribName);
+
+      PreparedStatement preparedStatement =
+          conn.prepareStatement(SQL_SELECT_getCIRelationAttrByCiRelIdAndAttribName);
+
+      preparedStatement.setInt(1, ci_relation_id);
+      preparedStatement.setString(2, attribute_name);
+
+      log.info("preparedStatement: " + preparedStatement);
+      ResultSet result = preparedStatement.executeQuery();
+
+      int numberOfRecords = 0;
+      String attribValue = new String();
+      while (result.next()) {
+        attribValue = result.getString("dfValue");
+        numberOfRecords++;
+
+      }
+
+      if (numberOfRecords != 1) {
+        log.error("There must be an attribute value for ci_relation_id {} & attribute_name {}",
+            ci_relation_id, attribute_name);
+        throw new UnSupportedOperation(
+            "numberOfRecords for  SQL_SELECT_getCIRelationAttrByCiRelIdAndAttribName must be 1"
+                + numberOfRecords);
+      }
+
+
+      return attribValue;
+
+
+    } catch (Exception e) {
+      log.error("Error while fetching records for ci_relation_id {} & attribute_name {}",
+          ci_relation_id, attribute_name);
+
+      throw new UnSupportedOperation(
+          "Error while processing SQL_SELECT_getCIRelationAttrByCiRelIdAndAttribName "
+              + e.getMessage());
+    }
+
+
+  }
+
 
 
 }
