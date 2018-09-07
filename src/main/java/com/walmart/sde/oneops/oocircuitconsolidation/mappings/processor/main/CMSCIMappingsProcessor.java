@@ -105,6 +105,9 @@ public class CMSCIMappingsProcessor {
             process_CREATE_CMSCI(mapping);
             break;
 
+          case "NO_ACTION":
+            log.info("Noaction for mapping: "+gson.toJson(mapping));
+            break; 
 
           default:
             throw new UnSupportedTransformationMappingException(
@@ -132,6 +135,10 @@ public class CMSCIMappingsProcessor {
           case "SWITCH_CMSCI_ATTRIBUTE_ID":
             process_SWITCH_CMSCI_ATTRIBUTE_ID(mapping);
             break;
+
+          case "NO_ACTION":
+            log.info("Noaction for mapping: "+gson.toJson(mapping));
+            break; 
 
           default:
             throw new UnSupportedTransformationMappingException(
@@ -161,7 +168,7 @@ public class CMSCIMappingsProcessor {
     log.info("**************************************************************************");
     log.info("Begin: process_CREATE_CMSCI() ");
 
-    int nsId = dal.getNsIdForNsPath(nsForPlatformCiComponents);
+    int nsId = dal.getNsIdForNsPath(this.nsForPlatformCiComponents);
     int targetClazzId = mapping.getTargetClassId();
     String targetClazzName = mapping.getTargetClassname();
 
@@ -173,9 +180,10 @@ public class CMSCIMappingsProcessor {
     if (this.ooPhase.equals(IConstants.DESIGN_PHASE)
         || this.ooPhase.equals(IConstants.TRANSITION_PHASE)) {
       int ciId = dal.getNext_cm_pk_seqId();
+      int lastAppliedRfcId=dal.getNext_dj_pk_seq();
       String goid = nsId + "-" + targetClazzId + "-" + ciId;
       String ciName = "os"; // hardcoded value, so far only 1 CI is being created
-      dal.createCMSCI(nsId, ciId, targetClazzId, ciName, goid, ciStateId, comments, createdBy);
+      dal.createCMSCI(nsId, ciId, targetClazzId, ciName, goid, ciStateId, comments, lastAppliedRfcId, createdBy);
       log.info("os component created with ciId: {} for targetClazzName {}", ciId, targetClazzName);
 
     } else if (this.ooPhase.equals(IConstants.OPERATE_PHASE)) {
@@ -193,8 +201,9 @@ public class CMSCIMappingsProcessor {
         String ciName = bomComputeCiName.replace("compute", "os");// hardcoded value, so far only 1
                                                                   // CI is being created
         int ciId = dal.getNext_cm_pk_seqId();
+        int lastAppliedRfcId=dal.getNext_dj_pk_seq();
         String goid = nsId + "-" + targetClazzId + "-" + ciId;
-        dal.createCMSCI(nsId, ciId, targetClazzId, ciName, goid, ciStateId, comments, createdBy);
+        dal.createCMSCI(nsId, ciId, targetClazzId, ciName, goid, ciStateId, comments, lastAppliedRfcId, createdBy);
         log.info("os component created with ciId: {}", ciId);
         log.info("os component created with ciId: {} for targetClazzName {}", ciId,
             targetClazzName);
@@ -218,7 +227,7 @@ public class CMSCIMappingsProcessor {
         "Begin: process_DELETE_CMSCI() **************************************************************************");
 
     log.info("deleting cmsCis for nsForPlatformCiComponents {} and clazz {}",
-        nsForPlatformCiComponents, mapping.getSourceClassname());
+        this.nsForPlatformCiComponents, mapping.getSourceClassname());
 
     Map<Integer, String> cmsCiIdAndCiNamesToDeleteMap = dal.getCiIdsAndCiNameForNsAndClazz(
         this.nsForPlatformCiComponents, mapping.getSourceClassname());
@@ -243,8 +252,8 @@ public class CMSCIMappingsProcessor {
     String targetClassName = mapping.getTargetClassname();
     int targetclassId = mapping.getTargetClassId();
 
-    List<Integer> ciIds = dal.getCiIdsForNsAndClazz(nsForPlatformCiComponents, sourceClassName);
-    int nsId = dal.getNsIdForNsPath(nsForPlatformCiComponents);
+    List<Integer> ciIds = dal.getCiIdsForNsAndClazz(this.nsForPlatformCiComponents, sourceClassName);
+    int nsId = dal.getNsIdForNsPath(this.nsForPlatformCiComponents);
 
     log.info("Begin: process_SWITCH_CMCI_CLAZZID_CLAZZNAME_GOID ()");
     log.info("**************************************************************************");

@@ -3,6 +3,7 @@ package com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.dal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -408,8 +409,35 @@ public class KloopzCmDal {
 
   }
 
+  public int getNext_dj_pk_seq() {
+
+    try {
+
+      String SQL_SELECT_Next_dj_pk_seq = "SELECT nextval('dj_pk_seq');";
+
+      log.info("SQL_SELECT_Next_dj_pk_seq: " + SQL_SELECT_Next_dj_pk_seq);
+      PreparedStatement preparedStatement = conn.prepareStatement(SQL_SELECT_Next_dj_pk_seq);
+
+      log.info("preparedStatement: " + preparedStatement);
+      ResultSet resultSet = preparedStatement.executeQuery();
+
+      while (resultSet.next()) {
+        int nextVal = resultSet.getInt("nextval");
+        log.info("nextVal: " + nextVal);
+        return nextVal;
+
+      }
+    } catch (Exception e) {
+      throw new UnSupportedOperation("Error while fetching records" + e.getMessage());
+    }
+    throw new UnSupportedOperation("Unable to retrive next CiId");
+
+  }
+
+
+
   public void createCMSCI(int nsId, int ciId, int targetClazzId, String ciName, String goid,
-      int ciStateId, String comments, String createdBy) {
+      int ciStateId, String comments, int last_applied_rfc_id, String createdBy) {
 
     /*
      * insert into cm_ci (ci_id, ns_id, class_id, ci_name, ci_goid, comments, ci_state_id,
@@ -435,8 +463,8 @@ public class KloopzCmDal {
        * ;
        */
       String SQL_INSERT_CreateNewCMSCI =
-          "INSERT INTO cm_ci (ci_id, ns_id, class_id, ci_name, ci_goid, comments, ci_state_id, created_by) "
-              + "VALUES (?, ?, ?, ?, ?, ?, ?, ?);";
+          "INSERT INTO cm_ci (ci_id, ns_id, class_id, ci_name, ci_goid, comments, ci_state_id, last_applied_rfc_id, created_by) "
+              + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);";
 
       log.info("SQL_INSERT_CreateNewCMSCI: " + SQL_INSERT_CreateNewCMSCI);
       PreparedStatement preparedStatement = conn.prepareStatement(SQL_INSERT_CreateNewCMSCI);
@@ -448,7 +476,8 @@ public class KloopzCmDal {
       preparedStatement.setString(5, goid);
       preparedStatement.setString(6, comments);
       preparedStatement.setInt(7, ciStateId);
-      preparedStatement.setString(8, createdBy);
+      preparedStatement.setInt(8, last_applied_rfc_id);
+      preparedStatement.setString(9, createdBy);
 
       log.info("preparedStatement: " + preparedStatement);
 
@@ -670,6 +699,60 @@ public class KloopzCmDal {
 
 
     } catch (Exception e) {
+      throw new UnSupportedOperation("Error while fetching records" + e.getMessage());
+    }
+
+
+    return cmsCiRelationIds;
+  }
+
+
+  public List<Integer> getCMSCIRelationIds_By_Ns_RelationName_FromCiIdToCiId(String ns_path,
+      String relation_name, int fromciId, int tociId) {
+
+
+    List<Integer> cmsCiRelationIds = new ArrayList<Integer>();
+    try {
+
+      String SQL_SELECT_CMSCIRelationIds_By_Ns_RelationName_FromCiIdToCiId =
+          "select cir.ci_relation_id , cir.from_ci_id , cir.to_ci_id "
+              + "from cm_ci_relations cir, md_relations mdr, cm_ci_state cis, cm_ci from_ci, cm_ci to_ci, ns_namespaces ns "
+              + "where ns.ns_path=?  and cir.ns_id = ns.ns_id  and cir.ci_state_id = cis.ci_state_id  "
+              + "and cir.relation_id = mdr.relation_id   and mdr.relation_name = ?  and cir.from_ci_id = from_ci.ci_id  "
+              + "and cir.to_ci_id = to_ci.ci_id and cir.from_ci_id=? and cir.to_ci_id=? ;";
+
+
+      log.info("SQL_SELECT_CMSCIRelationIds_By_Ns_RelationName_FromCiIdToCiId: "
+          + SQL_SELECT_CMSCIRelationIds_By_Ns_RelationName_FromCiIdToCiId);
+
+      PreparedStatement preparedStatement =
+          conn.prepareStatement(SQL_SELECT_CMSCIRelationIds_By_Ns_RelationName_FromCiIdToCiId);
+
+      preparedStatement.setString(1, ns_path);
+      preparedStatement.setString(2, relation_name);
+      preparedStatement.setInt(3, fromciId);
+      preparedStatement.setInt(4, tociId);
+
+
+      log.info("preparedStatement: " + preparedStatement);
+      ResultSet resultSet = preparedStatement.executeQuery();
+
+      int numberOfRecords = 0;
+      while (resultSet.next()) {
+        cmsCiRelationIds.add(resultSet.getInt("ci_relation_id"));
+        numberOfRecords++;
+      }
+
+      log.info(
+          "Number of CmsCiRelations: <{}> for ns_path <{}> relation_name <{}> fromciId <{}> tociId <{}>",
+          numberOfRecords, ns_path, relation_name, fromciId, tociId);
+
+      if (numberOfRecords > 1) {
+        throw new UnSupportedOperation(
+            "numberOfRecords <" + numberOfRecords + "> Error: can not have more than 1 relation");
+      }
+
+    } catch (SQLException e) {
       throw new UnSupportedOperation("Error while fetching records" + e.getMessage());
     }
 

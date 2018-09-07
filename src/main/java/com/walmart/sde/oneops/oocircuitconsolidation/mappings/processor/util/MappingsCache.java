@@ -4,14 +4,12 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import com.google.gson.Gson;
 import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.config.IConstants;
 import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.model.CmsCIRelationAndRelationAttributesActionMappingsModel;
 import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.model.CmsCiAndCmsCiAttributesActionMappingsModel;
@@ -19,42 +17,25 @@ import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.model.Cm
 public class MappingsCache {
 
   private final Logger log = LoggerFactory.getLogger(getClass());
+  private Connection conn;
 
-  public Map<String, List> createTransformationMappingsCache(Connection conn, String ooPhase) {
-
-    log.info("loading transformation mappings...");
-
-    Map<String, List> transformationMappingsMap = new HashMap<String, List>();
-
-    List<CmsCiAndCmsCiAttributesActionMappingsModel> cmsCiMappings = getCMSCiMappings(conn, ooPhase);
-    List<CmsCIRelationAndRelationAttributesActionMappingsModel> cmsCiRelationsMappings =
-        getCMSCiRelationsMappings(conn, ooPhase);
-
-    log.info("cmsCiMappings: " + new Gson().toJson(cmsCiMappings));
-    log.info("cmsCiRelationsMappings: " + new Gson().toJson(cmsCiRelationsMappings));
-    
-    transformationMappingsMap.put(IConstants.cmsCiMappingsMapKey, cmsCiMappings);
-    transformationMappingsMap.put(IConstants.cmsCiRelationsMappingsMapKey, cmsCiRelationsMappings);
-
-    log.info("loaded transformation mappings");
-
-    return transformationMappingsMap;
-
-
+  public MappingsCache(Connection conn) {
+    this.conn = conn;
   }
 
-  private List<CmsCiAndCmsCiAttributesActionMappingsModel> getCMSCiMappings(Connection conn, String ooPhase) {
+
+  private List<CmsCiAndCmsCiAttributesActionMappingsModel> getCMSCiAndAttribsMappings(String sql,
+      String ooPhase) {
 
     List<CmsCiAndCmsCiAttributesActionMappingsModel> cmsCiMappingsList =
         new ArrayList<CmsCiAndCmsCiAttributesActionMappingsModel>();
 
     try {
-     
-      String sqlGetAllCiMappings = "SELECT * FROM kloopzcm.CmsCiAndCmsCiAttributesActionMappings where sourceclassid!=targetclassid and oophase=?;";
-      PreparedStatement preparedStement=conn.prepareStatement(sqlGetAllCiMappings);
+
+      PreparedStatement preparedStement = this.conn.prepareStatement(sql);
       preparedStement.setString(1, ooPhase);
-      
-      log.info("preparedStement: "+preparedStement);
+
+      log.info("preparedStement: " + preparedStement);
       ResultSet resultSet = preparedStement.executeQuery();
 
 
@@ -62,7 +43,6 @@ public class MappingsCache {
         CmsCiAndCmsCiAttributesActionMappingsModel mapping =
             new CmsCiAndCmsCiAttributesActionMappingsModel();
 
-        //String ooPhase=resultSet.getString("oophase");
         String sourcePack = resultSet.getString("sourcepack");
         String sourceClassname = resultSet.getString("sourceclassname");
         int sourceClassId = resultSet.getInt("sourceclassid");
@@ -107,34 +87,30 @@ public class MappingsCache {
     return cmsCiMappingsList;
   }
 
-  private List<CmsCIRelationAndRelationAttributesActionMappingsModel> getCMSCiRelationsMappings(
-      Connection conn, String ooPhase) {
+  private List<CmsCIRelationAndRelationAttributesActionMappingsModel> getCMSCiRelationsAndAttribsMappings(
+      String sql, String ooPhase) {
 
     List<CmsCIRelationAndRelationAttributesActionMappingsModel> cmsCiRelationsMappingsList =
         new ArrayList<CmsCIRelationAndRelationAttributesActionMappingsModel>();
 
 
-
     try {
-     
-      String sqlGetAllCiMappings =
-          "SELECT * FROM kloopzcm.CmsCIRelationAndRelationAttributesActionMappings where oophase=?;";
-      log.info("sqlGetAllCiMappings: "+sqlGetAllCiMappings);
-    
 
-      PreparedStatement preparedStement=conn.prepareStatement(sqlGetAllCiMappings);
+
+      log.info("sql: {}", sql);
+      PreparedStatement preparedStement = conn.prepareStatement(sql);
       preparedStement.setString(1, ooPhase);
-      
-      log.info("preparedStement: "+preparedStement);
+
+      log.info("preparedStement: " + preparedStement);
       ResultSet resultSet = preparedStement.executeQuery();
-      
+
 
       while (resultSet.next()) {
 
         CmsCIRelationAndRelationAttributesActionMappingsModel mapping =
             new CmsCIRelationAndRelationAttributesActionMappingsModel();
 
-        //String ooPhase=resultSet.getString("oophase");
+        // String ooPhase=resultSet.getString("oophase");
         String sourcePack = resultSet.getString("sourcepack");
         String targetPack = resultSet.getString("targetpack");
 
@@ -165,8 +141,8 @@ public class MappingsCache {
         String action = resultSet.getString("action");
         String entityType = resultSet.getString("entitytype");
 
-        
-        
+
+
         // setters
 
         mapping.setOoPhase(ooPhase);
@@ -208,5 +184,113 @@ public class MappingsCache {
 
   }
 
+  public List<CmsCiAndCmsCiAttributesActionMappingsModel> mappingsCacheForDeleteActionsForCMSCIAndCMSCIAttributes(
+      String ooPhase) {
+
+    String SQL_SELECT_mappingsCacheForDeleteActionsForCMSCIAndCMSCIAttributes =
+        "SELECT * FROM kloopzcm.CmsCiAndCmsCiAttributesActionMappings where ooPhase=? and action ='DELETE_CMSCI' order by id;";
+    log.info("SQL_SELECT_mappingsCacheForDeleteActionsForCMSCIAndCMSCIAttributes: {}",
+        SQL_SELECT_mappingsCacheForDeleteActionsForCMSCIAndCMSCIAttributes);
+
+    List<CmsCiAndCmsCiAttributesActionMappingsModel> mappingsCacheForDeleteActionsForCMSCIAndCMSCIAttributes =
+        getCMSCiAndAttribsMappings(
+            SQL_SELECT_mappingsCacheForDeleteActionsForCMSCIAndCMSCIAttributes, ooPhase);
+    return mappingsCacheForDeleteActionsForCMSCIAndCMSCIAttributes;
+
+
+  }
+
+  public List<CmsCIRelationAndRelationAttributesActionMappingsModel> mappingsCacheForDeleteActionsForCMSCIRelsAndCMSCIRelAttribs(
+      String ooPhase) {
+
+    String SQL_SELECT_mappingsCacheForDeleteActionsForCMSCIRelsAndCMSCIRelAttribs =
+        "SELECT * FROM kloopzcm.CmsCIRelationAndRelationAttributesActionMappings where oophase=? and action ='DELETE_RELATION' order by id;";
+
+
+    log.info("SQL_SELECT_mappingsCacheForDeleteActionsForCMSCIRelsAndCMSCIRelAttribs: {}",
+        SQL_SELECT_mappingsCacheForDeleteActionsForCMSCIRelsAndCMSCIRelAttribs);
+
+
+    List<CmsCIRelationAndRelationAttributesActionMappingsModel> mappingsCacheForDeleteActionsForCMSCIAndCMSCIAttributes =
+        getCMSCiRelationsAndAttribsMappings(
+            SQL_SELECT_mappingsCacheForDeleteActionsForCMSCIRelsAndCMSCIRelAttribs, ooPhase);
+    return mappingsCacheForDeleteActionsForCMSCIAndCMSCIAttributes;
+
+
+  }
+
+
+  public List<CmsCiAndCmsCiAttributesActionMappingsModel> mappingsCacheForNonDeleteActionsForCMSCIAndCMSCIAttributes(
+      String ooPhase) {
+
+    String SQL_SELECT_mappingsCacheForDeleteActionsForCMSCIAndCMSCIAttributes =
+        "SELECT * FROM kloopzcm.CmsCiAndCmsCiAttributesActionMappings where ooPhase=? and action !='DELETE_CMSCI' order by id;";
+
+    log.info("SQL_SELECT_mappingsCacheForDeleteActionsForCMSCIAndCMSCIAttributes: {}",
+        SQL_SELECT_mappingsCacheForDeleteActionsForCMSCIAndCMSCIAttributes);
+
+    List<CmsCiAndCmsCiAttributesActionMappingsModel> mappingsCacheForDeleteActionsForCMSCIAndCMSCIAttributes =
+        getCMSCiAndAttribsMappings(
+            SQL_SELECT_mappingsCacheForDeleteActionsForCMSCIAndCMSCIAttributes, ooPhase);
+    return mappingsCacheForDeleteActionsForCMSCIAndCMSCIAttributes;
+
+
+  }
+
+  public List<CmsCIRelationAndRelationAttributesActionMappingsModel> mappingsCacheForNonDeleteActionsForCMSCIRelsAndCMSCIRelAttribs(
+      String ooPhase) {
+
+    String SQL_SELECT_mappingsCacheForDeleteActionsForCMSCIRelsAndCMSCIRelAttribs =
+        "SELECT * FROM kloopzcm.CmsCIRelationAndRelationAttributesActionMappings where oophase=? and action !='DELETE_RELATION' order by id;";
+    log.info("SQL_SELECT_mappingsCacheForDeleteActionsForCMSCIRelsAndCMSCIRelAttribs: {}",
+        SQL_SELECT_mappingsCacheForDeleteActionsForCMSCIRelsAndCMSCIRelAttribs);
+
+
+    List<CmsCIRelationAndRelationAttributesActionMappingsModel> mappingsCacheForDeleteActionsForCMSCIAndCMSCIAttributes =
+        getCMSCiRelationsAndAttribsMappings(
+            SQL_SELECT_mappingsCacheForDeleteActionsForCMSCIRelsAndCMSCIRelAttribs, ooPhase);
+    return mappingsCacheForDeleteActionsForCMSCIAndCMSCIAttributes;
+
+
+  }
+
+
+  public Map<String, List> createTransformtionMappingsCacheForDeleteActions(String ooPhase) {
+
+    Map<String, List> transformationMappingsForDeleteActionsMap = new HashMap<String, List>();
+
+    List<CmsCiAndCmsCiAttributesActionMappingsModel> mappingsCacheForDeleteActionsForCMSCIAndCMSCIAttributes =
+        mappingsCacheForDeleteActionsForCMSCIAndCMSCIAttributes(ooPhase);
+
+    List<CmsCIRelationAndRelationAttributesActionMappingsModel> mappingsCacheForDeleteActionsForCMSCIRelsAndCMSCIRelAttribs =
+        mappingsCacheForDeleteActionsForCMSCIRelsAndCMSCIRelAttribs(ooPhase);
+
+    transformationMappingsForDeleteActionsMap.put(IConstants.cmsCiMappingsMapKey,
+        mappingsCacheForDeleteActionsForCMSCIAndCMSCIAttributes);
+    transformationMappingsForDeleteActionsMap.put(IConstants.cmsCiRelationsMappingsMapKey,
+        mappingsCacheForDeleteActionsForCMSCIRelsAndCMSCIRelAttribs);
+
+    return transformationMappingsForDeleteActionsMap;
+
+  }
+
+  public Map<String, List> createTransformtionMappingsCacheForNonDeleteActions(String ooPhase) {
+
+    Map<String, List> transformationMappingsForDeleteActionsMap = new HashMap<String, List>();
+
+    List<CmsCiAndCmsCiAttributesActionMappingsModel> mappingsCacheForNonDeleteActionsForCMSCIAndCMSCIAttributes =
+        mappingsCacheForNonDeleteActionsForCMSCIAndCMSCIAttributes(ooPhase);
+
+    List<CmsCIRelationAndRelationAttributesActionMappingsModel> mappingsCacheForNonDeleteActionsForCMSCIRelsAndCMSCIRelAttribs =
+        mappingsCacheForNonDeleteActionsForCMSCIRelsAndCMSCIRelAttribs(ooPhase);
+
+    transformationMappingsForDeleteActionsMap.put(IConstants.cmsCiMappingsMapKey,
+        mappingsCacheForNonDeleteActionsForCMSCIAndCMSCIAttributes);
+    transformationMappingsForDeleteActionsMap.put(IConstants.cmsCiRelationsMappingsMapKey,
+        mappingsCacheForNonDeleteActionsForCMSCIRelsAndCMSCIRelAttribs);
+
+    return transformationMappingsForDeleteActionsMap;
+
+  }
 
 }
