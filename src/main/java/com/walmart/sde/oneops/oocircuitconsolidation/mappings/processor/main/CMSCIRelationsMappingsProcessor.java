@@ -1,6 +1,5 @@
 package com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.main;
 
-import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -28,20 +27,30 @@ public class CMSCIRelationsMappingsProcessor {
   String ooPhase;
   String envName;
   String nsForPlatformCiComponents;
-  Connection conn;
   KloopzCmDal dal;
+  int releaseId;
 
 
   CMSCIRelationsMappingsProcessor(String ns, String platformName, String ooPhase, String envName,
-      Connection conn) {
+      KloopzCmDal dal, int releaseId) {
     setNs(ns);
     setPlatformName(platformName);
     setOoPhase(ooPhase);
     setEnvName(envName);
-    setConn(conn);
+    setDal(dal);
+    setReleaseId(releaseId);
     setNsForPlatformCiComponents(
         CircuitconsolidationUtil.getnsForPlatformCiComponents(ns, platformName, ooPhase, envName));
-    setDal(new KloopzCmDal(conn));
+  }
+
+
+  public int getReleaseId() {
+    return releaseId;
+  }
+
+
+  public void setReleaseId(int releaseId) {
+    this.releaseId = releaseId;
   }
 
 
@@ -69,10 +78,6 @@ public class CMSCIRelationsMappingsProcessor {
 
   public void setNsForPlatformCiComponents(String nsForPlatformCiComponents) {
     this.nsForPlatformCiComponents = nsForPlatformCiComponents;
-  }
-
-  public void setConn(Connection conn) {
-    this.conn = conn;
   }
 
 

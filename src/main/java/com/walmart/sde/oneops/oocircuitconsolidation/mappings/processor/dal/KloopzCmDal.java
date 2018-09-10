@@ -233,16 +233,17 @@ public class KloopzCmDal {
   }
 
 
-  public int getNsIdForNsPath(String nsForPlatformCiComponents) {
+  public int getNsIdForNsPath(String nsPath) {
 
     List<Integer> nsIds = new ArrayList<Integer>();
     try {
+
 
       String SQL_SELECT_nsIdForNsPath = "select * from ns_namespaces where ns_path=?";
       log.info("SQL_SELECT_nsIdForNsPath: " + SQL_SELECT_nsIdForNsPath);
 
       PreparedStatement preparedStatement = conn.prepareStatement(SQL_SELECT_nsIdForNsPath);
-      preparedStatement.setString(1, nsForPlatformCiComponents);
+      preparedStatement.setString(1, nsPath);
       log.info("preparedStatement: " + preparedStatement);
       ResultSet resultSet = preparedStatement.executeQuery();
 
@@ -253,11 +254,11 @@ public class KloopzCmDal {
 
       }
 
-      log.info("numberOfRecords {} for nsForPlatformCiComponents {} : nsIds {}", numberOfRecords,
-          nsForPlatformCiComponents, nsIds.toString());
+      log.info("numberOfRecords {} for nsPath {} : nsIds {}", numberOfRecords, nsPath,
+          nsIds.toString());
       if (numberOfRecords == 0 || numberOfRecords > 1) {
-        throw new UnSupportedOperation("numberOfRecords " + numberOfRecords
-            + " invalid for nsForPlatformCiComponents :" + nsForPlatformCiComponents);
+        throw new UnSupportedOperation(
+            "numberOfRecords " + numberOfRecords + " invalid for nsPath :" + nsPath);
       }
     } catch (Exception e) {
       throw new UnSupportedOperation("Error while fetching records" + e.getMessage());
@@ -1213,6 +1214,122 @@ public class KloopzCmDal {
     }
 
 
+  }
+
+  public void create_dj_rfc_ci(int rfc_id, int release_id, int ci_id, int ns_id, int class_id,
+      String ci_name, String ci_goid, int action_id, String created_by, String updated_by,
+      String comments) {
+
+    try {
+
+      String SQL_INSERT_create_dj_rfc_ci =
+          "INSERT INTO kloopzcm.dj_rfc_ci (rfc_id, release_id, ci_id, ns_id, class_id, "
+              + " ci_name, ci_goid, action_id, created_by, updated_by, comments) "
+              + " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
+
+      log.info("SQL_INSERT_create_dj_rfc_ci: " + SQL_INSERT_create_dj_rfc_ci);
+      PreparedStatement preparedStatement = conn.prepareStatement(SQL_INSERT_create_dj_rfc_ci);
+
+      preparedStatement.setInt(1, rfc_id);
+      preparedStatement.setInt(2, release_id);
+      preparedStatement.setInt(3, ci_id);
+      preparedStatement.setInt(4, ns_id);
+      preparedStatement.setInt(5, class_id);
+      preparedStatement.setString(6, ci_name);
+      preparedStatement.setString(7, ci_goid);
+      preparedStatement.setInt(8, action_id);
+      preparedStatement.setString(9, created_by);
+      preparedStatement.setString(10, updated_by);
+      preparedStatement.setString(11, comments);
+
+      log.info("preparedStatement: " + preparedStatement);
+
+      int numberOfInserts = preparedStatement.executeUpdate();
+      log.info("numberOfInserts: {}", numberOfInserts);
+
+
+    } catch (Exception e) {
+      throw new UnSupportedOperation("Error while creating new dj_rfc_ci " + e.getMessage());
+    }
+
+  }
+
+  public void create_dj_release(int release_id, int ns_id, int parent_release_id,
+      String release_name, String created_by, String commited_by, int release_state_id,
+      String release_type, String description, int revision) {
+    try {
+
+      String SQL_INSERT_create_dj_release =
+          "INSERT INTO kloopzcm.dj_releases (release_id, ns_id, parent_release_id, release_name, created_by, commited_by, "
+              + " release_state_id, release_type, description, revision) "
+              + " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
+
+      log.info("SQL_INSERT_create_dj_release: " + SQL_INSERT_create_dj_release);
+      PreparedStatement preparedStatement = conn.prepareStatement(SQL_INSERT_create_dj_release);
+
+
+
+      preparedStatement.setInt(1, release_id);
+      preparedStatement.setInt(2, ns_id);
+      preparedStatement.setInt(3, parent_release_id);
+      preparedStatement.setString(4, release_name);
+      preparedStatement.setString(5, created_by);
+      preparedStatement.setString(6, commited_by);
+      preparedStatement.setInt(7, release_state_id);
+      preparedStatement.setString(8, release_type);
+      preparedStatement.setString(9, description);
+      preparedStatement.setInt(10, revision);
+
+      log.info("preparedStatement: " + preparedStatement);
+
+      int numberOfInserts = preparedStatement.executeUpdate();
+      log.info("numberOfInserts: {}", numberOfInserts);
+
+
+    } catch (Exception e) {
+      throw new UnSupportedOperation("Error while creating new dj_rfc_ci " + e.getMessage());
+    }
+
+  }
+
+  public int getLastAppliedDjReleaseIdForNsReleasePath(String releaseNsPath) {
+
+    int lastAppliedReleaseId = 0;
+    try {
+
+      String SQL_SELECT_getLastAppliedDjReleaseIdForNsReleasePath =
+          "select r.release_id as releaseId, r.ns_id as nsId, "
+              + " r.parent_release_id as parentReleaseId, "
+              + " ns.ns_path as nsPath, r.release_name as releaseName, "
+              + " r.created_by as createdBy, r.commited_by as commitedBy, "
+              + " r.release_state_id as releaseStateId, rs.state_name as releaseState, "
+              + " r.release_type as releaseType, r.description, "
+              + " r.revision, r.created, r.updated "
+              + " from dj_releases r, ns_namespaces ns, dj_release_states rs "
+              + " where r.ns_id=ns.ns_id and r.release_state_id=rs.release_state_id and "
+              + " (rs.state_name='closed' or rs.state_name='canceled') and "
+              + " ns.ns_path=? order by r.release_id desc;";
+
+      log.info("SQL_SELECT_getLastAppliedDjReleaseIdForNsReleasePath: "
+          + SQL_SELECT_getLastAppliedDjReleaseIdForNsReleasePath);
+
+      PreparedStatement preparedStatement =
+          conn.prepareStatement(SQL_SELECT_getLastAppliedDjReleaseIdForNsReleasePath);
+      preparedStatement.setString(1, releaseNsPath);
+      log.info("preparedStatement: " + preparedStatement);
+      ResultSet resultSet = preparedStatement.executeQuery();
+
+      while (resultSet.next()) {
+        lastAppliedReleaseId = resultSet.getInt("releaseId");
+        return lastAppliedReleaseId;
+
+      }
+
+    } catch (SQLException e) {
+      throw new UnSupportedOperation("Error while fetching records: " + e.getMessage());
+    }
+
+    return lastAppliedReleaseId;
   }
 
 

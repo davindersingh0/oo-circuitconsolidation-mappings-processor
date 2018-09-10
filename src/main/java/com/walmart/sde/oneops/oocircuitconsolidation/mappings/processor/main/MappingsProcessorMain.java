@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import com.google.gson.Gson;
 import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.config.IConstants;
 import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.config.PostgressDbConnection;
+import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.dal.KloopzCmDal;
 import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.model.CmsCIRelationAndRelationAttributesActionMappingsModel;
 import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.model.CmsCiAndCmsCiAttributesActionMappingsModel;
 import com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.util.CircuitconsolidationUtil;
@@ -63,16 +64,16 @@ public class MappingsProcessorMain {
   }
 
   public void processMappings(Map<String, List> transformationMappings, String ns,
-      String platformName, String ooPhase, String envName, Connection conn) {
+      String platformName, String ooPhase, String envName, KloopzCmDal dal, int releaseId) {
     log.info("starting processing transformation mappings...");
 
     CMSCIMappingsProcessor cmsciMappingsProcessor = new CMSCIMappingsProcessor(ns,
-        platformName, ooPhase, envName, conn);
+        platformName, ooPhase, envName, dal, releaseId);
     
     cmsciMappingsProcessor.processCMSCIMappings(transformationMappings.get(IConstants.cmsCiMappingsMapKey));
     
     CMSCIRelationsMappingsProcessor  cmsciRelationsMappingsProcessor = new CMSCIRelationsMappingsProcessor(ns,
-        platformName, ooPhase, envName, conn);
+        platformName, ooPhase, envName, dal, releaseId);
     
     cmsciRelationsMappingsProcessor.processCMSCIRelationsMappings(transformationMappings.get(IConstants.cmsCiRelationsMappingsMapKey));
     log.info("Completed processing transformation mappings");

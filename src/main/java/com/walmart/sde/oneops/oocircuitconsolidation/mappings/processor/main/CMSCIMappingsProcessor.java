@@ -1,6 +1,5 @@
 package com.walmart.sde.oneops.oocircuitconsolidation.mappings.processor.main;
 
-import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -23,22 +22,35 @@ public class CMSCIMappingsProcessor {
   String ooPhase;
   String envName;
   String nsForPlatformCiComponents;
-  Connection conn;
   KloopzCmDal dal;
+  int releaseId;
   Gson gson = new Gson();
 
   CMSCIMappingsProcessor(String ns, String platformName, String ooPhase, String envName,
-      Connection conn) {
+      KloopzCmDal dal, int releaseId) {
 
     setNs(ns);
     setPlatformName(platformName);
     setOoPhase(ooPhase);
     setEnvName(envName);
-    setConn(conn);
+    setDal(dal);
+    setReleaseId(releaseId);
     setNsForPlatformCiComponents(
         CircuitconsolidationUtil.getnsForPlatformCiComponents(ns, platformName, ooPhase, envName));
-    setDal(new KloopzCmDal(conn));
 
+
+  }
+
+
+
+  public int getReleaseId() {
+    return releaseId;
+  }
+
+
+
+  public void setReleaseId(int releaseId) {
+    this.releaseId = releaseId;
   }
 
 
@@ -65,9 +77,6 @@ public class CMSCIMappingsProcessor {
     this.envName = envName;
   }
 
-  public void setConn(Connection conn) {
-    this.conn = conn;
-  }
 
 
   public void setNsForPlatformCiComponents(String nsForPlatformCiComponents) {
@@ -106,8 +115,8 @@ public class CMSCIMappingsProcessor {
             break;
 
           case "NO_ACTION":
-            log.info("Noaction for mapping: "+gson.toJson(mapping));
-            break; 
+            log.info("Noaction for mapping: " + gson.toJson(mapping));
+            break;
 
           default:
             throw new UnSupportedTransformationMappingException(
@@ -137,8 +146,8 @@ public class CMSCIMappingsProcessor {
             break;
 
           case "NO_ACTION":
-            log.info("Noaction for mapping: "+gson.toJson(mapping));
-            break; 
+            log.info("Noaction for mapping: " + gson.toJson(mapping));
+            break;
 
           default:
             throw new UnSupportedTransformationMappingException(
@@ -180,11 +189,16 @@ public class CMSCIMappingsProcessor {
     if (this.ooPhase.equals(IConstants.DESIGN_PHASE)
         || this.ooPhase.equals(IConstants.TRANSITION_PHASE)) {
       int ciId = dal.getNext_cm_pk_seqId();
-      int lastAppliedRfcId=dal.getNext_dj_pk_seq();
+      int lastAppliedRfcId = dal.getNext_dj_pk_seq();
       String goid = nsId + "-" + targetClazzId + "-" + ciId;
       String ciName = "os"; // hardcoded value, so far only 1 CI is being created
-      dal.createCMSCI(nsId, ciId, targetClazzId, ciName, goid, ciStateId, comments, lastAppliedRfcId, createdBy);
+      dal.createCMSCI(nsId, ciId, targetClazzId, ciName, goid, ciStateId, comments,
+          lastAppliedRfcId, createdBy);
       log.info("os component created with ciId: {} for targetClazzName {}", ciId, targetClazzName);
+      
+      int release_id = getReleaseId();
+      create_dj_rfc_ci(lastAppliedRfcId, release_id, ciId, nsId, targetClazzId, ciName, goid);
+      
 
     } else if (this.ooPhase.equals(IConstants.OPERATE_PHASE)) {
 
@@ -201,12 +215,17 @@ public class CMSCIMappingsProcessor {
         String ciName = bomComputeCiName.replace("compute", "os");// hardcoded value, so far only 1
                                                                   // CI is being created
         int ciId = dal.getNext_cm_pk_seqId();
-        int lastAppliedRfcId=dal.getNext_dj_pk_seq();
+        int lastAppliedRfcId = dal.getNext_dj_pk_seq();
         String goid = nsId + "-" + targetClazzId + "-" + ciId;
-        dal.createCMSCI(nsId, ciId, targetClazzId, ciName, goid, ciStateId, comments, lastAppliedRfcId, createdBy);
+        dal.createCMSCI(nsId, ciId, targetClazzId, ciName, goid, ciStateId, comments,
+            lastAppliedRfcId, createdBy);
         log.info("os component created with ciId: {}", ciId);
         log.info("os component created with ciId: {} for targetClazzName {}", ciId,
             targetClazzName);
+        int release_id = getReleaseId();
+        create_dj_rfc_ci(lastAppliedRfcId, release_id, ciId, nsId, targetClazzId, ciName, goid);
+
+
       }
 
 
@@ -220,6 +239,25 @@ public class CMSCIMappingsProcessor {
     log.info("\n\n");
 
   }
+
+
+
+  private void create_dj_rfc_ci(int rfc_id, int release_id, int ci_id, int ns_id, int class_id,
+      String ci_name, String ci_goid) {
+
+    log.info(
+        "creating dj_rfc_ci with rfc_id {}, release_id {}, ci_id {}, class_id {}, ci_name {}, ci_goid {}",
+        rfc_id, release_id, ci_id, class_id, ci_name, ci_goid);
+    int action_id = 100;
+    String created_by = IConstants.CIRCUIT_CONSOLIDATION_USER;
+    String updated_by = IConstants.CIRCUIT_CONSOLIDATION_USER;
+    String comments = IConstants.CIRCUIT_CONSOLIDATION_COMMENTS;
+
+    dal.create_dj_rfc_ci(rfc_id, release_id, ci_id, ns_id, class_id, ci_name, ci_goid, action_id,
+        created_by, updated_by, comments);
+
+  }
+
 
 
   private void process_DELETE_CMSCI(CmsCiAndCmsCiAttributesActionMappingsModel mapping) {
@@ -252,7 +290,8 @@ public class CMSCIMappingsProcessor {
     String targetClassName = mapping.getTargetClassname();
     int targetclassId = mapping.getTargetClassId();
 
-    List<Integer> ciIds = dal.getCiIdsForNsAndClazz(this.nsForPlatformCiComponents, sourceClassName);
+    List<Integer> ciIds =
+        dal.getCiIdsForNsAndClazz(this.nsForPlatformCiComponents, sourceClassName);
     int nsId = dal.getNsIdForNsPath(this.nsForPlatformCiComponents);
 
     log.info("Begin: process_SWITCH_CMCI_CLAZZID_CLAZZNAME_GOID ()");
@@ -410,7 +449,7 @@ public class CMSCIMappingsProcessor {
   }
 
   private int getReferenceCiId(String bomCiName, Map<Integer, String> sourceClazzCiIdsAndNamesMap) {
-   
+
     String bomCiNameSuffix = getBomCiSuffix(bomCiName);
 
     for (int referenceCiId : sourceClazzCiIdsAndNamesMap.keySet()) {

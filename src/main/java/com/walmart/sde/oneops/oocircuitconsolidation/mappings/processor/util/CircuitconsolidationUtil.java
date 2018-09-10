@@ -57,4 +57,25 @@ public class CircuitconsolidationUtil {
 
   }
 
+
+  public static String getNsForRelease(String ns, String platformName, String ooPhase,
+      String envName) {
+    switch (ooPhase) {
+      case IConstants.DESIGN_PHASE:
+        return ns;
+
+      case IConstants.TRANSITION_PHASE:
+        return ns + "/" + envName + "/manifest";
+
+      case IConstants.OPERATE_PHASE:
+        return ns + "/" + envName + "/bom";
+
+      default:
+        log.error("ooPhase {} not supported", ooPhase);
+
+        throw new UnSupportedOperation(ooPhase + " not supported");
+
+    }
+  }
+
 }
