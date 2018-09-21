@@ -64,7 +64,7 @@ public class MappingsProcessorTest {
      * 
      * 
      */
-    String ns = "/TestOrg2/TestTransformtionOperatePhase17";
+    String ns = "/TestOrg2/TestTransformtionOperatePhase27";
     String platformName = "guineapig-brown";
 
     // String ooPhase = IConstants.OPERATE_PHASE;
@@ -115,7 +115,7 @@ public class MappingsProcessorTest {
     ReleaseManager releaseManager_TransitionPhase =
         new ReleaseManager(ns, platformName, IConstants.TRANSITION_PHASE, envName, dal);
     int lastAppliedReleaseId_TransitionPhase =
-        releaseManager_TransitionPhase.getLastApplied_dj_releaseForPhase(IConstants.DESIGN_PHASE);
+        releaseManager_TransitionPhase.getLastApplied_dj_releaseForPhase(IConstants.TRANSITION_PHASE);
     int releaseId_TransitionPhase =
         releaseManager_TransitionPhase.create_dj_release(lastAppliedReleaseId_TransitionPhase);
 
@@ -140,7 +140,7 @@ public class MappingsProcessorTest {
         new ReleaseManager(ns, platformName, IConstants.OPERATE_PHASE, envName, dal);
 
     int lastAppliedReleaseId_OperatePhase =
-        releaseManager_OperatePhase.getLastApplied_dj_releaseForPhase(IConstants.TRANSITION_PHASE);
+        releaseManager_OperatePhase.getLastApplied_dj_releaseForPhase(IConstants.OPERATE_PHASE);
 
     int releaseId_OperatePhase =
         releaseManager_OperatePhase.create_dj_release(lastAppliedReleaseId_OperatePhase);
@@ -154,7 +154,7 @@ public class MappingsProcessorTest {
 
     log.info("Transformation implemented, commiting transaction..");
     log.info("**********************************************************************");
-    conn.commit();
+    //conn.commit();
     log.info("Transformation committed to database");
     log.info("**********************************************************************");
     log.info("closing connection: ");

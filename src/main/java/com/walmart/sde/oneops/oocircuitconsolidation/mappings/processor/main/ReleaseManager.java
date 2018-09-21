@@ -105,6 +105,58 @@ public class ReleaseManager {
           + "> for ooPhase " + ooPhase + " not supported");
     }
 
+    
+    return lastAppliedReleaseId;
+
+  }
+  
+  @Deprecated
+  public int getLastApplied_dj_releaseForPhaseV2(String ooPhase) {
+
+    String releaseNsPath =
+        CircuitconsolidationUtil.getNsForRelease(this.ns, this.platformName, ooPhase, this.envName);
+
+    int lastAppliedReleaseId = dal.getLastAppliedDjReleaseIdForNsReleasePath(releaseNsPath);
+
+    log.info("lastAppliedReleaseId {} for ooPhase {} , platformName {} , envName {}, ns {}",
+        lastAppliedReleaseId, ooPhase, this.platformName, this.envName, this.ns);
+
+    if (lastAppliedReleaseId == 0) {
+
+      switch (ooPhase) {
+        case IConstants.OPERATE_PHASE:
+          releaseNsPath = CircuitconsolidationUtil.getNsForRelease(this.ns, this.platformName,
+              IConstants.TRANSITION_PHASE, this.envName);
+          lastAppliedReleaseId = dal.getLastAppliedDjReleaseIdForNsReleasePath(releaseNsPath);
+
+          log.info(
+              "lastAppliedReleaseId ooPhase Operate phase was 0, fetched last lastAppliedReleaseId {} for Transition Phase",
+              lastAppliedReleaseId);
+
+          return lastAppliedReleaseId;
+
+        case IConstants.TRANSITION_PHASE:
+          releaseNsPath = CircuitconsolidationUtil.getNsForRelease(this.ns, this.platformName,
+              IConstants.DESIGN_PHASE, this.envName);
+          lastAppliedReleaseId = dal.getLastAppliedDjReleaseIdForNsReleasePath(releaseNsPath);
+          log.info(
+              "lastAppliedReleaseId ooPhase Transition phase was 0, fetched last lastAppliedReleaseId {} for Design Phase",
+              lastAppliedReleaseId);
+
+          return lastAppliedReleaseId;
+
+        default:
+          throw new UnSupportedOperation(
+              "getLastApplied_dj_releaseForPhase method not supported for ooPhase: " + ooPhase);
+
+      }
+    }
+
+    if (lastAppliedReleaseId == 0) {
+      throw new UnSupportedOperation("lastAppliedReleaseId <" + lastAppliedReleaseId
+          + "> for ooPhase " + ooPhase + " not supported");
+    }
+
     return lastAppliedReleaseId;
 
   }

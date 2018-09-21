@@ -107,7 +107,7 @@ public class CMSCIRelationsMappingsProcessor {
             break;
 
           case "NO_ACTION":
-            log.info("Noaction for mapping: " + gson.toJson(mapping));
+            log.info("No action for mapping: " + gson.toJson(mapping));
             process_NO_ACTION(mapping);
 
             break;
@@ -148,9 +148,28 @@ public class CMSCIRelationsMappingsProcessor {
   }
 
   private void process_NO_ACTION(CmsCIRelationAndRelationAttributesActionMappingsModel mapping) {
+
+    if (this.ooPhase.equalsIgnoreCase(IConstants.DESIGN_PHASE)
+        || this.ooPhase.equalsIgnoreCase(IConstants.TRANSITION_PHASE)) {
+      process_NO_ACTION_IN_DESIGN_TRANSITION_Phase(mapping);
+    } else if (this.ooPhase.equalsIgnoreCase(IConstants.OPERATE_PHASE)) {
+      process_NO_ACTION_IN_OPERATE_Phase(mapping);
+    } else {
+
+      throw new UnSupportedTransformationMappingException(
+          "ooPhase " + this.ooPhase + "not supported");
+
+    }
+
+
+
+  }
+
+  private void process_NO_ACTION_IN_DESIGN_TRANSITION_Phase(
+      CmsCIRelationAndRelationAttributesActionMappingsModel mapping) {
     log.info("\n\n");
     log.info("**************************************************************************");
-    log.info("Begin: process_NO_ACTION() ");
+    log.info("Begin: process_NO_ACTION_IN_DESIGN_TRANSITION_Phase() ");
 
     String targetCMSCIRelationName = mapping.getTargetCmsCiRelationName();
     int targetCMSCIRelationId = mapping.getTargetCmsCiRelationId();
@@ -159,11 +178,7 @@ public class CMSCIRelationsMappingsProcessor {
     String targetToCMSCIClazzName = mapping.getTargetToCmsCiClazzName();
     int targetToCMSCIClazzId = mapping.getTargetToCmsCiClazzId();
 
-    if (!this.ooPhase.equals(IConstants.DESIGN_PHASE)) {
-      log.info(
-          "No Processing will be done for NO_ACTION mappings case for ooPhase other than DESIGN_PHASE");
-      return;
-    }
+
     if (targetCMSCIRelationName.equalsIgnoreCase("catalog.WatchedBy")
         || targetCMSCIRelationName.equalsIgnoreCase("manifest.WatchedBy")) {
       log.info("Ignore relation {} fromClazz {} toClazz {}", targetCMSCIRelationName,
@@ -173,17 +188,19 @@ public class CMSCIRelationsMappingsProcessor {
       return;
     }
 
-    Map<Integer, String> fromCiIdsCiNamesMap = dal
-        .getCiIdsAndCiNameForNsAndClazz(this.nsForPlatformCiComponents, targetFromCMSCIClazzName);
 
-    Map<Integer, String> toCiIdsCiNamesMap =
-        dal.getCiIdsAndCiNameForNsAndClazz(this.nsForPlatformCiComponents, targetToCMSCIClazzName);
+
+    Map<Integer, String> fromCiIdsCiNamesMap = dal.getCiIdsAndCiNameForNsAndClazzMap(
+        this.nsForPlatformCiComponents, targetFromCMSCIClazzName);
+
+    Map<Integer, String> toCiIdsCiNamesMap = dal
+        .getCiIdsAndCiNameForNsAndClazzMap(this.nsForPlatformCiComponents, targetToCMSCIClazzName);
 
     for (int fromCiId : fromCiIdsCiNamesMap.keySet()) {
 
       for (int toCiId : toCiIdsCiNamesMap.keySet()) {
-        
-        
+
+
         if (relationExistsFromCiIdToCiId(this.nsForPlatformCiComponents, targetCMSCIRelationName,
             fromCiId, toCiId)) {
           log.info("targetCMSCIRelationName {} exists fromClazz {} toClazz {} ",
@@ -196,6 +213,8 @@ public class CMSCIRelationsMappingsProcessor {
           log.info("RELATION FOUND!! No Action required");
         } else {
 
+          log.info("RELATION NOT FOUND!! Check if Relation to be created!!");
+
           log.info("targetCMSCIRelationName {} does not exists fromClazz {} toClazz {} ",
               targetCMSCIRelationName, targetFromCMSCIClazzName, targetToCMSCIClazzName);
           log.info("targetCMSCIRelationId {} does not exists fromClazzId {} toClazzId {} ",
@@ -203,18 +222,52 @@ public class CMSCIRelationsMappingsProcessor {
           log.info("targetCMSCIRelationName {} does not exists fromCiId {} toCiId {} ",
               targetCMSCIRelationName, fromCiId, toCiId);
 
-          log.info("RELATION NOT FOUND!! ");
+          String fromCiName = fromCiIdsCiNamesMap.get(fromCiId);
+          String toCiName = toCiIdsCiNamesMap.get(toCiId);
           
-          String fromCiName=fromCiIdsCiNamesMap.get(fromCiId);
-          String toCiName=fromCiIdsCiNamesMap.get(toCiId);
+          log.info("targetCMSCIRelationName {} does not exists fromCiName {} toCiName {} ",
+              targetCMSCIRelationName, fromCiName, toCiName);
           
-          
-          
+
+         
+
+          if (targetCMSCIRelationName.equalsIgnoreCase("manifest.Entrypoint")
+              && !toCiName.equalsIgnoreCase("fqdn")) {
+
+
+            log.info("Ignore relation {} fromClazz {} toClazz {}", targetCMSCIRelationName,
+                targetFromCMSCIClazzName, targetToCMSCIClazzName);
+            log.info("Ignore relationId {} fromClazz {} toClazz {}", targetCMSCIRelationId,
+                targetFromCMSCIClazzId, targetToCMSCIClazzId);
+
+            log.info("Ignore relation {} fromCiName {} toCiName {}", targetCMSCIRelationName,
+                fromCiName, toCiName);
+
+            log.info("Ignore relation {} fromCiId {} toCiName {}", targetCMSCIRelationName,
+                fromCiId, toCiId);
+
+            log.info("RELATION NOT FOUND!! Relation will be ignored!!");
+
+
+            return;
+          }
+          log.info("RELATION NOT FOUND!! Relation will be created!!");
           int nsId = dal.getNsIdForNsPath(this.nsForPlatformCiComponents);
           String comments = IConstants.CIRCUIT_CONSOLIDATION_COMMENTS;
           int ci_state_id = 100;
           createCMSCIRelation(nsId, fromCiId, targetCMSCIRelationId, toCiId, ci_state_id, comments);
-          
+
+          log.info("created relation {} fromClazz {} toClazz {}", targetCMSCIRelationName,
+              targetFromCMSCIClazzName, targetToCMSCIClazzName);
+          log.info("created relationId {} fromClazz {} toClazz {}", targetCMSCIRelationId,
+              targetFromCMSCIClazzId, targetToCMSCIClazzId);
+
+          log.info("created relation {} fromCiName {} toCiName {}", targetCMSCIRelationName,
+              fromCiName, toCiName);
+
+          log.info("created relation {} fromCiId {} toCiName {}", targetCMSCIRelationName, fromCiId,
+              toCiId);
+
         }
 
       }
@@ -223,12 +276,93 @@ public class CMSCIRelationsMappingsProcessor {
 
 
 
-    log.info("End: process_NO_ACTION() ");
+    log.info("End: process_NO_ACTION_IN_DESIGN_TRANSITION_Phase() ");
     log.info("**************************************************************************");
     log.info("\n\n");
 
   }
 
+
+  private void process_NO_ACTION_IN_OPERATE_Phase(
+      CmsCIRelationAndRelationAttributesActionMappingsModel mapping) {
+    log.info("\n\n");
+    log.info("**************************************************************************");
+    log.info("Begin: process_NO_ACTION_IN_OPERATE_Phase() ");
+
+    String targetCMSCIRelationName = mapping.getTargetCmsCiRelationName();
+    int targetCMSCIRelationId = mapping.getTargetCmsCiRelationId();
+    String targetFromCMSCIClazzName = mapping.getTargetFromCmsCiClazzName();
+    int targetFromCMSCIClazzId = mapping.getTargetFromCmsCiClazzId();
+    String targetToCMSCIClazzName = mapping.getTargetToCmsCiClazzName();
+    int targetToCMSCIClazzId = mapping.getTargetToCmsCiClazzId();
+
+
+    // begins logic
+
+    // TODO: In progress
+
+    Map<String, Integer> fromCiIdsAndCiNamesMap = new HashMap<String, Integer>();
+    Map<String, Integer> toCiIdsAndCiNamesMap = new HashMap<String, Integer>();
+
+    if (targetFromCMSCIClazzName.contains("bom.oneops.1.")) {
+
+      fromCiIdsAndCiNamesMap = dal.getCiNamesAndCiIdsMapForNsAndClazz(
+          this.nsForPlatformCiComponents, targetFromCMSCIClazzName);
+
+      // TODO: logic yet to be implemented
+    } else if (targetFromCMSCIClazzName.contains("manifest.")) {
+
+      String transitonPhaseNsPath = CircuitconsolidationUtil.getnsForPlatformCiComponents(this.ns,
+          this.platformName, IConstants.TRANSITION_PHASE, this.envName);
+      fromCiIdsAndCiNamesMap =
+          dal.getCiNamesAndCiIdsMapForNsAndClazz(transitonPhaseNsPath, targetFromCMSCIClazzName);
+
+      log.info("fromCiIdsAndCiNamesMap: {}", gson.toJson(fromCiIdsAndCiNamesMap));
+
+      toCiIdsAndCiNamesMap = dal.getCiNamesAndCiIdsMapForNsAndClazz(this.nsForPlatformCiComponents,
+          targetToCMSCIClazzName);
+
+      log.info("toCiIdsAndCiNamesMap: {}", gson.toJson(toCiIdsAndCiNamesMap));
+
+
+      List<Integer> fromManifestCiIdsList = new ArrayList<Integer>(fromCiIdsAndCiNamesMap.values());
+      List<Integer> toBomCiIdsList = new ArrayList<Integer>(toCiIdsAndCiNamesMap.values());
+
+      for (int fromManifestCiId : fromManifestCiIdsList) {
+        for (int toBomCiId : toBomCiIdsList) {
+          List<Integer> relations = dal.getCMSCIRelationIds_By_Ns_RelationName_FromCiIdToCiId(
+              this.nsForPlatformCiComponents, targetCMSCIRelationName, fromManifestCiId, toBomCiId);
+          if (relations.size() != 1) {
+
+            log.info("RELATION DOES NOT EXIST!!! Need to create relation");
+            // process_CREATE_RELATION_IN_OPERATE_Phase(mapping);
+            
+            //TODO: Test this scenario tomorrow
+          } else {
+
+            log.info("RELATION DOES EXIST!!! No Action Required");
+          }
+
+        }
+      }
+
+
+
+    } else {
+      throw new UnSupportedTransformationMappingException(
+          "This scenario was not identified for mapping : " + gson.toJson(mapping));
+    }
+
+
+    // TODO: In progress
+
+
+
+    log.info("End: process_NO_ACTION_IN_OPERATE_Phase() ");
+    log.info("**************************************************************************");
+    log.info("\n\n");
+
+  }
 
   private boolean relationExistsFromCiIdToCiId(String nsForPlatformCiComponents2,
       String targetCMSCIRelationName, int fromCiId, int toCiId) {
@@ -285,13 +419,17 @@ public class CMSCIRelationsMappingsProcessor {
     int targetToCMSCIClazzId = mapping.getTargetToCmsCiClazzId();
     String comments = IConstants.CIRCUIT_CONSOLIDATION_COMMENTS;
     int ci_state_id = 100;
-
+    String sourceFromCmsCiClazzName = mapping.getSourceFromCmsCiClazzName();
     List<Integer> fromCiIds = new ArrayList<Integer>();
-
+    Map<Integer, String> fromCiIdsAndNamesMap = new HashMap<Integer, String>();
     if (targetCMSCIRelationName.contains("base.Requires")) {
 
-      fromCiIds = dal.getCiIdsForNsClazzAndPlatformCiName(this.ns, targetFromCMSCIClazzName,
-          this.platformName);
+
+      fromCiIdsAndNamesMap = dal.getCiIdsForNsClazzAndPlatformCiName(this.ns,
+          targetFromCMSCIClazzName, this.platformName);
+
+      fromCiIds = new ArrayList<>(fromCiIdsAndNamesMap.keySet());
+
       if (fromCiIds.size() != 1) {
         throw new UnSupportedTransformationMappingException(
             "fromCiIds <" + fromCiIds + "> for clazzName <" + targetFromCMSCIClazzName
@@ -300,14 +438,24 @@ public class CMSCIRelationsMappingsProcessor {
       log.info("fromCiIds <{}> for base.Requires relation for clazzName: {}", fromCiIds.toString(),
           targetFromCMSCIClazzName);
     } else {
-      fromCiIds =
-          dal.getCiIdsForNsAndClazz(this.nsForPlatformCiComponents, targetFromCMSCIClazzName);
+
+
+      fromCiIdsAndNamesMap = dal.getCiIdsAndCiNameForNsAndClazzMap(this.nsForPlatformCiComponents,
+          targetFromCMSCIClazzName);
+      fromCiIds = new ArrayList<>(fromCiIdsAndNamesMap.keySet());
+
     }
 
     int nsId = dal.getNsIdForNsPath(this.nsForPlatformCiComponents);
 
-    List<Integer> toCiIds =
-        dal.getCiIdsForNsAndClazz(this.nsForPlatformCiComponents, targetToCMSCIClazzName);
+    /*
+     * List<Integer> toCiIds = dal.getCiIdsForNsAndClazz(this.nsForPlatformCiComponents,
+     * targetToCMSCIClazzName);
+     */
+
+    Map<Integer, String> toCiIdsAndNamesMap = dal
+        .getCiIdsAndCiNameForNsAndClazzMap(this.nsForPlatformCiComponents, targetToCMSCIClazzName);
+    List<Integer> toCiIds = new ArrayList<>(toCiIdsAndNamesMap.keySet());
 
     log.info(
         "creating CMSCIRelation targetCMSCIRelationName {} targetCMSCIRelationId {} targetFromCMSCIClazzName {}, targetFromCMSCIClazzId {}, "
@@ -315,14 +463,34 @@ public class CMSCIRelationsMappingsProcessor {
         targetCMSCIRelationName, targetCMSCIRelationId, targetFromCMSCIClazzName,
         targetFromCMSCIClazzId, targetToCMSCIClazzName, targetToCMSCIClazzId);
 
-    log.info("creating CMSCIRelation fromCiIds <{}> To toCiIds <{}>", fromCiIds.toString(),
-        toCiIds.toString());
+    log.info("creating CMSCIRelation {} fromClazz <{}> To toClazz <{}>", targetCMSCIRelationName,
+        targetFromCMSCIClazzName, targetToCMSCIClazzName);
+    log.info("creating CMSCIRelation {} fromClazzId <{}> To toClazzId <{}>", targetCMSCIRelationId,
+        targetFromCMSCIClazzId, targetToCMSCIClazzId);
+    log.info("creating CMSCIRelationId {} fromCiIds <{}> To toCiIds <{}>", targetCMSCIRelationName,
+        fromCiIds.toString(), toCiIds.toString());
 
 
     for (int fromCiId : fromCiIds) {
       for (int toCiId : toCiIds) {
- 
+        String fromCiName = fromCiIdsAndNamesMap.get(fromCiId);
+        String toCiName = toCiIdsAndNamesMap.get(toCiId);
+
+        if ((targetCMSCIRelationName.contains("catalog.DependsOn")
+            || targetCMSCIRelationName.contains("manifest.DependsOn"))
+            && fromCiName.equalsIgnoreCase("fqdn") && toCiName.equalsIgnoreCase("os")) {
+          log.info(
+              "relation {} from fromCiName {} fromCiId {} >> toCiName {} toCiId {} will be ignored as an exceptional case",
+              targetCMSCIRelationName, fromCiName, fromCiId, toCiName, toCiId);
+          continue;
+
+        }
+
         createCMSCIRelation(nsId, fromCiId, targetCMSCIRelationId, toCiId, ci_state_id, comments);
+        log.info("created CMSCIRelationId {} fromCiIds <{}> To toCiIds <{}>",
+            targetCMSCIRelationName, fromCiId, toCiId);
+
+
       }
 
     }
@@ -336,13 +504,13 @@ public class CMSCIRelationsMappingsProcessor {
 
   private void createCMSCIRelation(int nsId, int fromCiId, int targetCMSCIRelationId, int toCiId,
       int ci_state_id, String comments) {
-    
+
     int ci_relation_id = dal.getNext_cm_pk_seqId();
     String relation_goid = fromCiId + "-" + targetCMSCIRelationId + "-" + toCiId;
-    
-    dal.createCMSCIRelation(ci_relation_id, nsId, fromCiId, relation_goid,
-        targetCMSCIRelationId, toCiId, ci_state_id, comments);
-    
+
+    dal.createCMSCIRelation(ci_relation_id, nsId, fromCiId, relation_goid, targetCMSCIRelationId,
+        toCiId, ci_state_id, comments);
+
   }
 
 
@@ -361,8 +529,10 @@ public class CMSCIRelationsMappingsProcessor {
 
     if (sourceCmsCiRelationName.contains("base.Requires")) {
 
-      fromCiIds = dal.getCiIdsForNsClazzAndPlatformCiName(this.ns, sourceFromCmsCiClazzName,
-          this.platformName);
+      Map<Integer, String> fromCiIdsAndNamesMap = dal.getCiIdsForNsClazzAndPlatformCiName(this.ns,
+          sourceFromCmsCiClazzName, this.platformName);
+      fromCiIds = new ArrayList<>(fromCiIdsAndNamesMap.keySet());
+
       if (fromCiIds.size() != 1) {
         throw new UnSupportedTransformationMappingException(
             "fromCiIds <" + fromCiIds + "> for sourceFromCmsCiClazzName <"
@@ -554,54 +724,6 @@ public class CMSCIRelationsMappingsProcessor {
 
   }
 
-  /*
-   * private String getOperatePhaseCiRelationAttributeValue(String targetCMSCIRelationName, String
-   * attributeName, Map<String, Map<String, String>> bomCiRelations) {
-   * 
-   */
-
-  @Deprecated
-  private String getOperatePhaseCiRelationAttributeValue(int attributeId, String attributeName,
-      String relation_name, String fromClazz, String toClazz,
-      Map<String, String> bomCiRelationsMap) {
-
-
-    boolean isRelationSupported = false;
-
-    if (relation_name.equals("base.DeployedTo")) {
-
-      if (attributeName.equals("priority")) {
-        isRelationSupported = true;
-        return getAttributeValueFromReferenceCiRelationForOperatePhase(attributeId, attributeName,
-            relation_name, fromClazz, toClazz, bomCiRelationsMap);
-      }
-    }
-
-    if (relation_name.equals("base.RealizedAs")) {
-
-      if (attributeName.equals("priority")) {
-        isRelationSupported = true;
-        return getAttributeValueFromReferenceCiRelationForOperatePhase(attributeId, attributeName,
-            relation_name, fromClazz, toClazz, bomCiRelationsMap);
-
-      } else if (attributeName.equals("last_manifest_rfc")) {
-        int rfc_Id = dal.getNext_dj_pk_seq();
-        return Integer.toString(rfc_Id); // TODO: check with team if this the right way to get this
-                                         // Id
-
-      }
-
-    }
-
-    if (!isRelationSupported) {
-      throw new UnSupportedTransformationMappingException("attributeName <" + attributeName
-          + "> not supported for relation_name <" + relation_name + "> ");
-    }
-
-    return "";
-  }
-
-
   private String getAttributeValueFromReferenceCiRelationForOperatePhase(int attributeId,
       String attributeName, String relation_name, String fromClazz, String toClazz,
       Map<String, String> bomCiRelationsMap) {
@@ -671,7 +793,7 @@ public class CMSCIRelationsMappingsProcessor {
 
         log.info("referenceCiRelationId {} ", referenceCiRelationId);
         String relationAttribValue =
-            dal.getCIRelationAttrByCiRelIdAndAttribName(referenceCiRelationId, attributeName);
+            dal.getCIRelationAttrValueByCiRelIdAndAttribName(referenceCiRelationId, attributeName);
 
 
         log.info("value returned will be {}", relationAttribValue);
@@ -693,101 +815,6 @@ public class CMSCIRelationsMappingsProcessor {
 
   }
 
-
-
-  @Deprecated
-  private void process_ADD_RELATION_ATTRIBUTE_OPERATE_PHASE_Old(
-      CmsCIRelationAndRelationAttributesActionMappingsModel mapping) {
-
-
-    String targetFromCMSCIClazzName = mapping.getTargetFromCmsCiClazzName();
-    int targetFromCMSCIClazzId = mapping.getTargetFromCmsCiClazzId();
-
-    String targetToCMSCIClazzName = mapping.getTargetToCmsCiClazzName();
-    int targetToCMSCIClazzId = mapping.getTargetToCmsCiClazzId();
-
-
-    String targetCMSCIRelationName = mapping.getTargetCmsCiRelationName();
-    int targetCMSCIRelationId = mapping.getTargetCmsCiRelationId();
-
-    String attributeName = mapping.getAttributeName();
-    int attributeId = mapping.getAttributeId();
-
-    String dfValue = mapping.getDfValue();
-    String djValue = mapping.getDjValue();
-
-    String owner = IConstants.CIRCUIT_CONSOLIDATION_USER;
-    String comments = IConstants.CIRCUIT_CONSOLIDATION_COMMENTS;
-
-    log.info(
-        "creating CMSCIRelation attribute attributeName: {} attributeId: {} , with dfValue {} & djValue {}",
-        attributeName, attributeId, dfValue, djValue);
-
-    log.info("fromClazz {} relationName {} toClazz", targetFromCMSCIClazzName,
-        targetCMSCIRelationName, targetToCMSCIClazzName);
-    log.info("fromClazzId {} relationId {} toClazzId", targetFromCMSCIClazzId,
-        targetCMSCIRelationId, targetToCMSCIClazzId);
-
-    Map<String, Map<String, String>> bomCiRelations = dal
-        .getCMSCIRelationIdsMap_By_Ns_RelationName_FromClazzToClazz(this.nsForPlatformCiComponents,
-            targetCMSCIRelationName, targetFromCMSCIClazzName, targetToCMSCIClazzName);
-
-
-    Map<String, Map<String, String>> referenceBomCiRelationsForComputeClazz =
-        getReferenceBomCiRelationsForComputeClazz(attributeId, attributeName,
-            targetCMSCIRelationName, targetFromCMSCIClazzName, targetToCMSCIClazzName);
-
-    for (Map<String, String> bomCiRelationsMap : bomCiRelations.values()) {
-
-      String fromCiNameSuffix = getBomCiSuffix(bomCiRelationsMap.get("fromCiName"));
-      String toCiNameSuffix = getBomCiSuffix(bomCiRelationsMap.get("toCiName"));
-
-
-      for (Map<String, String> referenceBomCiRelationsMap : referenceBomCiRelationsForComputeClazz
-          .values()) {
-
-        String referenceFromCiNameSuffix =
-            getBomCiSuffix(referenceBomCiRelationsMap.get("fromCiName"));
-        String referenceToCiNameSuffix = getBomCiSuffix(referenceBomCiRelationsMap.get("toCiName"));
-
-        if (fromCiNameSuffix.equals(referenceFromCiNameSuffix)
-            && toCiNameSuffix.equals(referenceToCiNameSuffix)) {
-
-          log.info("bomCiRelationsMap {} will refer to referenceBomCiRelationsMap {}",
-              gson.toJson(bomCiRelationsMap), gson.toJson(referenceBomCiRelationsMap));
-
-          if (isOperatePhaseCMSCiRelationAttributeMappingSupported(attributeName,
-              targetCMSCIRelationName, targetToCMSCIClazzName)) {
-            int referenceCiRelationId =
-                new Integer(referenceBomCiRelationsMap.get("ci_relation_id"));
-            String relationAttribValue =
-                dal.getCIRelationAttrByCiRelIdAndAttribName(referenceCiRelationId, attributeName);
-
-            dfValue = relationAttribValue;
-            djValue = relationAttribValue;
-
-            int ci_relation_id = new Integer(bomCiRelationsMap.get("ci_relation_id"));
-
-            int ci_rel_attribute_id = dal.getNext_cm_pk_seqId();
-
-            log.info(
-                "Adding new ci_rel_attribute_id <{}> to ci_relation_id <{}>, copied from referenceCiRelationId {} with relationAttribValue {}",
-                ci_rel_attribute_id, ci_relation_id, referenceCiRelationId, relationAttribValue);
-
-
-            dal.createCMSCIRelationAttribute(ci_rel_attribute_id, ci_relation_id, attributeId,
-                dfValue, djValue, owner, comments);
-
-          }
-
-        }
-
-      }
-
-
-    }
-
-  }
 
   private void process_CREATE_RELATION_IN_OPERATE_Phase(
       CmsCIRelationAndRelationAttributesActionMappingsModel mapping) {
@@ -877,6 +904,23 @@ public class CMSCIRelationsMappingsProcessor {
             toBomCiName);
         log.info("creating relation from {} >> {} >> {}", fromCiId, targetCMSCIRelationId, toCiId);
 
+
+        if (targetCMSCIRelationName.contains("bom.DependsOn")) {
+
+          String fromBomCiNamePrefix = getBomCiPrefix(fromBomCiName);
+          String toBomCiNamePrefix = getBomCiPrefix(toBomCiName);
+
+          if (fromBomCiNamePrefix.equalsIgnoreCase("fqdn")
+              && toBomCiNamePrefix.equalsIgnoreCase("os")) {
+
+            log.info(
+                "relation {} fromBomCiName {} fromCiId {} >> toBomCiName {} toCiId {} will be ignored as an exceptional case",
+                targetCMSCIRelationName, fromBomCiName, fromCiId, toBomCiName, toCiId);
+            continue;
+
+          }
+
+        }
 
         int ci_relation_id = dal.getNext_cm_pk_seqId();
         String relation_goid = fromCiId + "-" + targetCMSCIRelationId + "-" + toCiId;
@@ -1063,38 +1107,6 @@ public class CMSCIRelationsMappingsProcessor {
 
     return clouidCiId;
 
-  }
-
-
-  @Deprecated
-  private boolean isOperatePhaseCMSCiRelationAttributeMappingSupported(String attributeName,
-      String targetCMSCIRelationName, String targetToCMSCIClazzName) {
-
-    boolean isRelationSupported = false;
-
-    if (targetCMSCIRelationName.equals("base.DeployedTo")) {
-
-      if (attributeName.equals("priority")) {
-        isRelationSupported = true;
-      }
-    }
-
-    if (targetCMSCIRelationName.equals("base.RealizedAs")) {
-
-      if (attributeName.equals("priority")) {
-        isRelationSupported = true;
-      } else if (attributeName.equals("last_manifest_rfc")) {
-        isRelationSupported = true;
-      }
-
-    }
-
-
-    if (!isRelationSupported) {
-      throw new UnSupportedTransformationMappingException("attributeName <" + attributeName
-          + "> not supported for targetCMSCIRelationName <" + targetCMSCIRelationName + "> ");
-    }
-    return isRelationSupported;
   }
 
 

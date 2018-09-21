@@ -203,7 +203,7 @@ public class CMSCIMappingsProcessor {
     } else if (this.ooPhase.equals(IConstants.OPERATE_PHASE)) {
 
       Map<Integer, String> bomComputeCiIdAndCiNameMap =
-          dal.getCiIdsAndCiNameForNsAndClazz(this.nsForPlatformCiComponents, "bom.Compute");
+          dal.getCiIdsAndCiNameForNsAndClazzMap(this.nsForPlatformCiComponents, "bom.Compute");
 
       for (String bomComputeCiName : bomComputeCiIdAndCiNameMap.values()) {
 
@@ -267,7 +267,7 @@ public class CMSCIMappingsProcessor {
     log.info("deleting cmsCis for nsForPlatformCiComponents {} and clazz {}",
         this.nsForPlatformCiComponents, mapping.getSourceClassname());
 
-    Map<Integer, String> cmsCiIdAndCiNamesToDeleteMap = dal.getCiIdsAndCiNameForNsAndClazz(
+    Map<Integer, String> cmsCiIdAndCiNamesToDeleteMap = dal.getCiIdsAndCiNameForNsAndClazzMap(
         this.nsForPlatformCiComponents, mapping.getSourceClassname());
 
     log.info("ciIdsToDelete: " + gson.toJson(cmsCiIdAndCiNamesToDeleteMap));
@@ -348,14 +348,14 @@ public class CMSCIMappingsProcessor {
 
 
     Map<Integer, String> sourceClazzCiIdsAndNamesMap =
-        dal.getCiIdsAndCiNameForNsAndClazz(this.nsForPlatformCiComponents, sourceClassName);
+        dal.getCiIdsAndCiNameForNsAndClazzMap(this.nsForPlatformCiComponents, sourceClassName);
 
     List<Integer> sourceClazzCiIds = new ArrayList<Integer>(sourceClazzCiIdsAndNamesMap.keySet());
 
 
 
     Map<Integer, String> targetClazzCiIdsAndNamesMap =
-        dal.getCiIdsAndCiNameForNsAndClazz(this.nsForPlatformCiComponents, targetClassName);
+        dal.getCiIdsAndCiNameForNsAndClazzMap(this.nsForPlatformCiComponents, targetClassName);
 
     List<Integer> targetClazzCiIds = new ArrayList<Integer>(targetClazzCiIdsAndNamesMap.keySet());
 
