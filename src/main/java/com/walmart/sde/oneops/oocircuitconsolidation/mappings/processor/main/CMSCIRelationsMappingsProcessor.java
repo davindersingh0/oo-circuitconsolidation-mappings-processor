@@ -224,12 +224,11 @@ public class CMSCIRelationsMappingsProcessor {
 
           String fromCiName = fromCiIdsCiNamesMap.get(fromCiId);
           String toCiName = toCiIdsCiNamesMap.get(toCiId);
-          
+
           log.info("targetCMSCIRelationName {} does not exists fromCiName {} toCiName {} ",
               targetCMSCIRelationName, fromCiName, toCiName);
-          
 
-         
+
 
           if (targetCMSCIRelationName.equalsIgnoreCase("manifest.Entrypoint")
               && !toCiName.equalsIgnoreCase("fqdn")) {
@@ -290,62 +289,30 @@ public class CMSCIRelationsMappingsProcessor {
     log.info("Begin: process_NO_ACTION_IN_OPERATE_Phase() ");
 
     String targetCMSCIRelationName = mapping.getTargetCmsCiRelationName();
-    int targetCMSCIRelationId = mapping.getTargetCmsCiRelationId();
+    // int targetCMSCIRelationId = mapping.getTargetCmsCiRelationId();
     String targetFromCMSCIClazzName = mapping.getTargetFromCmsCiClazzName();
-    int targetFromCMSCIClazzId = mapping.getTargetFromCmsCiClazzId();
+    // int targetFromCMSCIClazzId = mapping.getTargetFromCmsCiClazzId();
     String targetToCMSCIClazzName = mapping.getTargetToCmsCiClazzName();
-    int targetToCMSCIClazzId = mapping.getTargetToCmsCiClazzId();
+    // int targetToCMSCIClazzId = mapping.getTargetToCmsCiClazzId();
 
 
-    // begins logic
 
-    // TODO: In progress
+    if (targetFromCMSCIClazzName.contains("manifest.")
+        && targetToCMSCIClazzName.contains("bom.oneops.1.")) {
 
-    Map<String, Integer> fromCiIdsAndCiNamesMap = new HashMap<String, Integer>();
-    Map<String, Integer> toCiIdsAndCiNamesMap = new HashMap<String, Integer>();
-
-    if (targetFromCMSCIClazzName.contains("bom.oneops.1.")) {
-
-      fromCiIdsAndCiNamesMap = dal.getCiNamesAndCiIdsMapForNsAndClazz(
-          this.nsForPlatformCiComponents, targetFromCMSCIClazzName);
-
-      // TODO: logic yet to be implemented
-    } else if (targetFromCMSCIClazzName.contains("manifest.")) {
-
-      String transitonPhaseNsPath = CircuitconsolidationUtil.getnsForPlatformCiComponents(this.ns,
-          this.platformName, IConstants.TRANSITION_PHASE, this.envName);
-      fromCiIdsAndCiNamesMap =
-          dal.getCiNamesAndCiIdsMapForNsAndClazz(transitonPhaseNsPath, targetFromCMSCIClazzName);
-
-      log.info("fromCiIdsAndCiNamesMap: {}", gson.toJson(fromCiIdsAndCiNamesMap));
-
-      toCiIdsAndCiNamesMap = dal.getCiNamesAndCiIdsMapForNsAndClazz(this.nsForPlatformCiComponents,
-          targetToCMSCIClazzName);
-
-      log.info("toCiIdsAndCiNamesMap: {}", gson.toJson(toCiIdsAndCiNamesMap));
+      process_NO_ACTION_IN_OPERATE_Phase_ManifestToBom_Relation(mapping);
 
 
-      List<Integer> fromManifestCiIdsList = new ArrayList<Integer>(fromCiIdsAndCiNamesMap.values());
-      List<Integer> toBomCiIdsList = new ArrayList<Integer>(toCiIdsAndCiNamesMap.values());
+    } else if (targetFromCMSCIClazzName.contains("bom.oneops.1.")
+        && targetToCMSCIClazzName.contains("bom.oneops.1.")) {
 
-      for (int fromManifestCiId : fromManifestCiIdsList) {
-        for (int toBomCiId : toBomCiIdsList) {
-          List<Integer> relations = dal.getCMSCIRelationIds_By_Ns_RelationName_FromCiIdToCiId(
-              this.nsForPlatformCiComponents, targetCMSCIRelationName, fromManifestCiId, toBomCiId);
-          if (relations.size() != 1) {
+      process_NO_ACTION_IN_OPERATE_Phase_BomToBom_Relation(mapping);
 
-            log.info("RELATION DOES NOT EXIST!!! Need to create relation");
-            // process_CREATE_RELATION_IN_OPERATE_Phase(mapping);
-            
-            //TODO: Test this scenario tomorrow
-          } else {
 
-            log.info("RELATION DOES EXIST!!! No Action Required");
-          }
+    } else if (targetFromCMSCIClazzName.contains("bom.oneops.1.")
+        && targetToCMSCIClazzName.contains("account.Cloud")) {
 
-        }
-      }
-
+      process_NO_ACTION_IN_OPERATE_Phase_BomToCloud_Relation(mapping);
 
 
     } else {
@@ -354,15 +321,219 @@ public class CMSCIRelationsMappingsProcessor {
     }
 
 
-    // TODO: In progress
-
-
-
     log.info("End: process_NO_ACTION_IN_OPERATE_Phase() ");
     log.info("**************************************************************************");
     log.info("\n\n");
 
   }
+
+  private void process_NO_ACTION_IN_OPERATE_Phase_BomToCloud_Relation(
+      CmsCIRelationAndRelationAttributesActionMappingsModel mapping) {
+    // TODO Auto-generated method stub
+
+
+    String targetCMSCIRelationName = mapping.getTargetCmsCiRelationName();
+    int targetCMSCIRelationId = mapping.getTargetCmsCiRelationId();
+    String targetFromCMSCIClazzName = mapping.getTargetFromCmsCiClazzName();
+    int targetFromCMSCIClazzId = mapping.getTargetFromCmsCiClazzId();
+    String targetToCMSCIClazzName = mapping.getTargetToCmsCiClazzName();
+    int targetToCMSCIClazzId = mapping.getTargetToCmsCiClazzId();
+
+
+  }
+
+
+  private void process_NO_ACTION_IN_OPERATE_Phase_BomToBom_Relation(
+      CmsCIRelationAndRelationAttributesActionMappingsModel mapping) {
+    // TODO In-Progress
+
+    String targetCMSCIRelationName = mapping.getTargetCmsCiRelationName();
+    String targetFromCMSCIClazzName = mapping.getTargetFromCmsCiClazzName();
+    String targetToCMSCIClazzName = mapping.getTargetToCmsCiClazzName();
+
+    Map<String, Integer> fromManifestCiNamesAndCiIdsMap = dal.getCiNamesAndCiIdsMapForNsAndClazz(
+        this.nsForPlatformCiComponents, targetFromCMSCIClazzName);
+    Map<String, Integer> toBomCiNamesAndCiIdsMap = dal
+        .getCiNamesAndCiIdsMapForNsAndClazz(this.nsForPlatformCiComponents, targetToCMSCIClazzName);
+
+    if (targetCMSCIRelationName.equalsIgnoreCase("bom.DependsOn")) {
+
+
+    } else {
+
+      throw new UnSupportedTransformationMappingException(
+          targetCMSCIRelationName + "relationName is being handled");
+
+    }
+
+
+
+  }
+
+
+  private void process_NO_ACTION_IN_OPERATE_Phase_ManifestToBom_Relation(
+      CmsCIRelationAndRelationAttributesActionMappingsModel mapping) {
+
+    String targetCMSCIRelationName = mapping.getTargetCmsCiRelationName();
+    String targetFromCMSCIClazzName = mapping.getTargetFromCmsCiClazzName();
+    String targetToCMSCIClazzName = mapping.getTargetToCmsCiClazzName();
+
+
+    Map<String, Integer> fromManifestCiNamesAndCiIdsMap = new HashMap<String, Integer>();
+    Map<String, Integer> toBomCiNamesAndCiIdsMap = new HashMap<String, Integer>();
+
+    String transitonPhaseNsPath = CircuitconsolidationUtil.getnsForPlatformCiComponents(this.ns,
+        this.platformName, IConstants.TRANSITION_PHASE, this.envName);
+
+    fromManifestCiNamesAndCiIdsMap =
+        dal.getCiNamesAndCiIdsMapForNsAndClazz(transitonPhaseNsPath, targetFromCMSCIClazzName);
+
+    log.info("fromManifestCiNamesAndCiIdsMap: {}", gson.toJson(fromManifestCiNamesAndCiIdsMap));
+
+    toBomCiNamesAndCiIdsMap = dal.getCiNamesAndCiIdsMapForNsAndClazz(this.nsForPlatformCiComponents,
+        targetToCMSCIClazzName);
+
+    log.info("toBomCiNamesAndCiIdsMap: {}", gson.toJson(toBomCiNamesAndCiIdsMap));
+
+    if (targetCMSCIRelationName.equalsIgnoreCase("base.Entrypoint")) {
+      for (String fromManifestCiName : fromManifestCiNamesAndCiIdsMap.keySet()) {
+        for (String toBomCiName : toBomCiNamesAndCiIdsMap.keySet()) {
+
+          String toBomCiNamePrefix = getBomCiPrefix(toBomCiName);
+          if (!toBomCiNamePrefix.equalsIgnoreCase("fqdn")) {
+            log.info(
+                "NO_ACTION Required!!, This is an exceptional case. Only FQDN can have base.Entrypoint");
+            log.info(
+                "ignoring relation from fromManifestCiName {} >>base.Entrypoint >> toBomCiName {}",
+                fromManifestCiName, toBomCiName);
+          } else {
+            // check if relation exists, if it does not, then create
+            int fromManifestCiId = fromManifestCiNamesAndCiIdsMap.get(fromManifestCiName);
+            int toBomCiId = toBomCiNamesAndCiIdsMap.get(toBomCiName);
+
+
+            List<Integer> cmsCiRelationIds =
+                dal.getCMSCIRelationIds_By_Ns_RelationName_FromCiIdToCiId(
+                    this.nsForPlatformCiComponents, targetCMSCIRelationName, fromManifestCiId,
+                    toBomCiId);
+            log.info(
+                "checking relation from fromManifestCiName {} >> base.Entrypoint >> toBomCiName {}",
+                fromManifestCiName, toBomCiName);
+            log.info(
+                "checking relation from fromManifestCiId {} >> base.Entrypoint >> toBomCiId {}",
+                fromManifestCiId, toBomCiId);
+            if (cmsCiRelationIds.size() == 1) {
+              log.info("base.Entrypoint Relation Exists!! No action required ");
+
+            } else {
+
+              log.info("base.Entrypoint Relation does not Exists!! create new Relation!!");
+              log.info("delegating mapping to process_CREATE_RELATION_IN_OPERATE_Phase()");
+              // check if this function handles this relation properly!
+              process_CREATE_RELATION_IN_OPERATE_Phase(mapping);
+
+
+            }
+
+
+
+          }
+
+
+        }
+      }
+    } else if (targetCMSCIRelationName.equalsIgnoreCase("base.RealizedAs")) {
+
+
+      // create mapping for boms
+
+      List<String> fromManifestCiNamesList =
+          new ArrayList<String>(fromManifestCiNamesAndCiIdsMap.keySet());
+
+      log.info("jsonified fromManifestCiNamesList: {}", gson.toJson(fromManifestCiNamesList));
+      List<String> toBomCiNamesList = new ArrayList<String>(toBomCiNamesAndCiIdsMap.keySet());
+      log.info("jsonified toBomCiNamesList: {}", gson.toJson(toBomCiNamesList));
+
+      Map<String, Set<String>> fromManifestCisAndToBomCisPairsMap =
+          getFromManifestCisAndToBomCisPairs(fromManifestCiNamesList, toBomCiNamesList);
+      log.info("jsonified  fromManifestCisAndToBomCisPairsMap: {}",
+          gson.toJson(fromManifestCisAndToBomCisPairsMap));
+      // check if relation exists
+
+      for (String fromManifestCiName : fromManifestCisAndToBomCisPairsMap.keySet()) {
+
+        log.info("fromManifestCiName {}", fromManifestCiName);
+        Set<String> toBomCiNamesSet = fromManifestCisAndToBomCisPairsMap.get(fromManifestCiName);
+        log.info("jsonified toBomCiNamesSet {}", gson.toJson(toBomCiNamesSet));
+
+        // check relation from each fromManifestCiName to each associated toBomCiName in
+        // toBomCiNamesSet
+        for (String toBomCiName : toBomCiNamesSet) {
+
+          int fromManifestCiId = fromManifestCiNamesAndCiIdsMap.get(fromManifestCiName);
+          int toBomCiId = toBomCiNamesAndCiIdsMap.get(toBomCiName);
+          log.info(
+              "checking if relation exists : fromManifestCiName {} >> base.RealizedAs >> toBomCiName {}",
+              fromManifestCiName, toBomCiName);
+          log.info(
+              "checking if relation exists : fromManifestCiId {} >> base.RealizedAs >> toBomCiId {}",
+              fromManifestCiId, toBomCiId);
+
+          List<Integer> relationsList = dal.getCMSCIRelationIds_By_Ns_RelationName_FromCiIdToCiId(
+              this.nsForPlatformCiComponents, targetCMSCIRelationName, fromManifestCiId, toBomCiId);
+          if (relationsList.size() == 1) {
+
+            log.info("Manifest to Bom base.RealizedAs Relation Exists !!! No Action required!!");
+
+          } else {
+            log.info(
+                "Manifest to Bom base.RealizedAs Relation Does Not Exists !!! delegating mapping to process_CREATE_RELATION_IN_OPERATE_Phase()");
+
+            // check if this function handles this relation properly!
+            process_CREATE_RELATION_IN_OPERATE_Phase(mapping);
+
+          }
+
+
+        }
+
+      }
+
+
+    } else {
+      throw new UnSupportedTransformationMappingException(
+          "This scenario was not identified for processing!!! ");
+    }
+
+
+    // Map<String, String> getBomCiPrefixAndCiNameMap(toBomCiNamesAndCiIdsMap);
+
+
+
+  }
+
+
+  private boolean checkIf_ManifestToBom_RelationExists(
+      CmsCIRelationAndRelationAttributesActionMappingsModel mapping) {
+
+
+    return false;
+  }
+
+
+  private boolean checkIf_BomToCloud_RelationExists(
+      CmsCIRelationAndRelationAttributesActionMappingsModel mapping) {
+    // TODO Auto-generated method stub
+    return false;
+  }
+
+
+  private boolean checkIf_BomToBom_RelationExists(
+      CmsCIRelationAndRelationAttributesActionMappingsModel mapping) {
+    // TODO Auto-generated method stub
+    return false;
+  }
+
 
   private boolean relationExistsFromCiIdToCiId(String nsForPlatformCiComponents2,
       String targetCMSCIRelationName, int fromCiId, int toCiId) {
@@ -1032,7 +1203,7 @@ public class CMSCIRelationsMappingsProcessor {
 
   }
 
-  private Map<String, Set<String>> getFromManifestCisAndToBomCisPairs(
+  public Map<String, Set<String>> getFromManifestCisAndToBomCisPairs(
       List<String> fromBomCiNamesList, List<String> toBomCiNamesList) {
 
     Map<String, Set<String>> fromBomCisAndToBomCisPairsMap = new HashMap<String, Set<String>>();
@@ -1040,14 +1211,12 @@ public class CMSCIRelationsMappingsProcessor {
 
     for (String fromBomCiName : fromBomCiNamesList) {
 
-      log.info("fromBomCiName: " + fromBomCiName);
-      String fromBomCiNameSuffix = fromBomCiName;
-
       Set<String> set = new HashSet<String>();
 
       for (String toBomCiName : toBomCiNamesList) {
 
-        if (toBomCiName.contains(fromBomCiNameSuffix)) {
+        String toBomCiNamePrefix = getBomCiPrefix(toBomCiName);
+        if (fromBomCiName.equals(toBomCiNamePrefix)) {
 
           set.add(toBomCiName);
           fromBomCisAndToBomCisPairsMap.put(fromBomCiName, set);
